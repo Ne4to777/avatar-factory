@@ -220,10 +220,10 @@ info:
     @echo "MinIO:   http://localhost:9001"
     @echo ""
     @echo -e "{{BLUE}}=== Documentation ==={{NC}}"
-    @echo "Quick Start:  QUICKSTART.md"
-    @echo "Install:      INSTALL_GUIDE.md"
-    @echo "Scripts:      SCRIPTS_README.md"
-    @echo "Deployment:   DEPLOYMENT.md"
+    @echo "Quick Start:  docs/QUICKSTART.md"
+    @echo "Install:      docs/INSTALL_GUIDE.md"
+    @echo "Scripts:      docs/SCRIPTS_README.md"
+    @echo "Deployment:   docs/DEPLOYMENT.md"
 
 # 🔄 Перезагрузка при изменениях (watch mode)
 watch:

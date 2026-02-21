@@ -210,8 +210,8 @@ generate-key:
 # 📚 Показать документацию
 docs:
 	@echo -e "$(BLUE)Documentation:$(NC)"
-	@echo "  README.md           - Main documentation"
-	@echo "  QUICKSTART.md       - Quick start guide"
-	@echo "  INSTALL_GUIDE.md    - Installation guide"
-	@echo "  SCRIPTS_README.md   - Scripts documentation"
-	@echo "  DEPLOYMENT.md       - Production deployment"
+	@echo "  README.md              - Main documentation"
+	@echo "  docs/QUICKSTART.md     - Quick start guide"
+	@echo "  docs/INSTALL_GUIDE.md  - Installation guide"
+	@echo "  docs/SCRIPTS_README.md - Scripts documentation"
+	@echo "  docs/DEPLOYMENT.md     - Production deployment"

@@ -72,8 +72,8 @@
 | **Just** | `just install` | Современная альтернатива Make |
 | **Docker** | `docker-compose up` | Production deployment |
 
-**Не знаете что выбрать?** → [WHICH_METHOD.md](./WHICH_METHOD.md)  
-**Полное сравнение:** → [INSTALLATION_METHODS.md](./INSTALLATION_METHODS.md)
+**Не знаете что выбрать?** → [WHICH_METHOD.md](./docs/WHICH_METHOD.md)  
+**Полное сравнение:** → [INSTALLATION_METHODS.md](./docs/INSTALLATION_METHODS.md)
 
 ### 🎯 Рекомендуемая установка
 
@@ -199,6 +199,24 @@ Vs платные решения (D-ID, HeyGen): **$100-500/мес**
 - Композитинг FFmpeg: ~10-20 сек
 
 **Итого:** ~60-90 секунд на видео (15-30 сек)
+
+## 📚 Документация
+
+Вся документация находится в папке [`docs/`](./docs/):
+
+| Документ | Описание |
+|----------|----------|
+| **[docs/QUICKSTART.md](./docs/QUICKSTART.md)** | 🚀 Быстрый старт за 15 минут |
+| **[docs/INSTALL_GUIDE.md](./docs/INSTALL_GUIDE.md)** | 📦 Полное руководство по установке |
+| **[docs/WHICH_METHOD.md](./docs/WHICH_METHOD.md)** | 🤔 Какой метод установки выбрать? |
+| **[docs/INSTALLATION_METHODS.md](./docs/INSTALLATION_METHODS.md)** | 📊 Сравнение всех методов установки |
+| **[docs/BUILD_TOOLS.md](./docs/BUILD_TOOLS.md)** | 🔧 Обзор build инструментов |
+| **[docs/SCRIPTS_README.md](./docs/SCRIPTS_README.md)** | 📜 Документация по shell скриптам |
+| **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** | 🚢 Production deployment |
+| **[docs/PROJECT_SUMMARY.md](./docs/PROJECT_SUMMARY.md)** | 📊 Обзор проекта и архитектуры |
+| **[docs/TEST_RESULTS.md](./docs/TEST_RESULTS.md)** | 🧪 Результаты тестирования |
+
+**[→ Перейти к полной документации](./docs/)**
 
 ## 📝 Лицензия
 
