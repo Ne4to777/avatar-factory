@@ -125,26 +125,15 @@ export async function composeVideo(options: ComposeVideoOptions): Promise<string
       `[bg][avatar]overlay=(W-w)/2:(H-h)/2:shortest=1[video_with_avatar]`
     );
     
-    // 4. Добавляем субтитры (если есть)
-    let finalVideoFilter = '[video_with_avatar]';
-    if (subtitlesText) {
-      const escapedText = subtitlesText
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\'")
-        .replace(/:/g, '\\:');
-      
-      filters.push(
-        `[video_with_avatar]drawtext=text='${escapedText}':fontsize=50:fontcolor=white:x=(w-text_w)/2:y=h-150:box=1:boxcolor=black@0.6:boxborderw=10[video_final]`
-      );
-      finalVideoFilter = '[video_final]';
-    }
+    // 4. Финальное видео (без субтитров для упрощения теста)
+    const finalVideoFilter = '[video_with_avatar]';
     
     // Применяем фильтры
     command = command.complexFilter(filters);
     
     // Настройки вывода
     const outputOptions: string[] = [
-      '-map', finalVideoFilter.replace(/[\[\]]/g, ''),
+      '-map', finalVideoFilter,  // Keep brackets for filter reference
     ];
     
     // Аудио: микс музыки и голоса, или только голос

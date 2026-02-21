@@ -58,11 +58,16 @@ class GPUServerClient {
     speaker: string = 'xenia'
   ): Promise<Buffer> {
     try {
+      const formData = new FormData();
+      formData.append('text', text);
+      formData.append('language', 'ru');
+      formData.append('speaker', speaker);
+      
       const response = await this.client.post(
         '/api/tts',
-        null,
+        formData,
         {
-          params: { text, speaker },
+          headers: formData.getHeaders(),
           responseType: 'arraybuffer',
         }
       );
@@ -110,16 +115,15 @@ class GPUServerClient {
     negativePrompt?: string
   ): Promise<Buffer> {
     try {
+      const formData = new FormData();
+      formData.append('prompt', prompt);
+      formData.append('style', 'photorealistic');
+      
       const response = await this.client.post(
         '/api/generate-background',
-        null,
+        formData,
         {
-          params: {
-            prompt,
-            width,
-            height,
-            negative_prompt: negativePrompt || 'blurry, low quality, distorted',
-          },
+          headers: formData.getHeaders(),
           responseType: 'arraybuffer',
         }
       );

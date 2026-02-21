@@ -329,8 +329,10 @@ async function cleanupTempFiles(filePaths: string[]) {
 }
 
 // Инициализация
-await ensureTempDir();
-console.log('🚀 Video Worker started');
-console.log(`   Concurrency: 2`);
-console.log(`   Temp dir: ${TEMP_DIR}`);
-console.log(`   Waiting for jobs...\n`);
+(async () => {
+  await ensureTempDir();
+  console.log('🚀 Video Worker started');
+  console.log(`   Concurrency: 2`);
+  console.log(`   Temp dir: ${TEMP_DIR}`);
+  console.log(`   Waiting for jobs...\n`);
+})();
