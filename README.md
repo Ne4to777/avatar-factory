@@ -212,21 +212,14 @@ Vs платные решения (D-ID, HeyGen): **$100-500/мес**
 
 ## 📚 Документация
 
-Вся документация находится в папке [`docs/`](./docs/):
-
 | Документ | Описание |
 |----------|----------|
 | **[docs/QUICKSTART.md](./docs/QUICKSTART.md)** | 🚀 Быстрый старт за 15 минут |
 | **[docs/INSTALL_GUIDE.md](./docs/INSTALL_GUIDE.md)** | 📦 Полное руководство по установке |
-| **[docs/WHICH_METHOD.md](./docs/WHICH_METHOD.md)** | 🤔 Какой метод установки выбрать? |
-| **[docs/INSTALLATION_METHODS.md](./docs/INSTALLATION_METHODS.md)** | 📊 Сравнение всех методов установки |
-| **[docs/BUILD_TOOLS.md](./docs/BUILD_TOOLS.md)** | 🔧 Обзор build инструментов |
-| **[docs/SCRIPTS_README.md](./docs/SCRIPTS_README.md)** | 📜 Документация по shell скриптам |
-| **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** | 🚢 Production deployment |
 | **[docs/PROJECT_SUMMARY.md](./docs/PROJECT_SUMMARY.md)** | 📊 Обзор проекта и архитектуры |
-| **[docs/TEST_RESULTS.md](./docs/TEST_RESULTS.md)** | 🧪 Результаты тестирования |
+| **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** | 🚢 Production deployment |
 
-**[→ Перейти к полной документации](./docs/)**
+**[→ Документация](./docs/)**
 
 ## 📝 Лицензия
 
