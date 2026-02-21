@@ -60,9 +60,28 @@
 
 ## 📦 Установка
 
+### 🚀 Быстрая установка (одна команда)
+
+```bash
+# Универсальный установщик
+curl -sSL https://raw.githubusercontent.com/Ne4to777/avatar-factory/main/quick-start.sh | bash
+```
+
+Или клонируйте и запустите локально:
+
+```bash
+git clone https://github.com/Ne4to777/avatar-factory.git
+cd avatar-factory
+./quick-start.sh
+```
+
+Скрипт автоматически определит тип вашей машины и установит нужные компоненты!
+
+### 📖 Детальная установка
+
 ### 1. Клонируйте репозиторий
 ```bash
-git clone https://github.com/yourusername/avatar-factory.git
+git clone https://github.com/Ne4to777/avatar-factory.git
 cd avatar-factory
 ```
 
