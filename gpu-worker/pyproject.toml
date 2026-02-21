@@ -1,0 +1,72 @@
+[project]
+name = "avatar-factory-gpu-worker"
+version = "1.0.0"
+description = "GPU Worker for Avatar Factory - AI model processing server"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Avatar Factory", email = "contact@avatar-factory.local"}
+]
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.6",
+    "diffusers>=0.25.1",
+    "transformers>=4.37.0",
+    "accelerate>=0.26.1",
+    "safetensors>=0.4.1",
+    "soundfile>=0.12.1",
+    "librosa>=0.10.1",
+    "opencv-python>=4.9.0",
+    "pillow>=10.2.0",
+    "imageio>=2.33.1",
+    "numpy>=1.26.3",
+    "scipy>=1.11.4",
+    "tqdm>=4.66.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+]
+
+gpu = [
+    "xformers>=0.0.23",
+    "gfpgan>=1.3.8",
+    "realesrgan>=0.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Ne4to777/avatar-factory"
+Repository = "https://github.com/Ne4to777/avatar-factory"
+Issues = "https://github.com/Ne4to777/avatar-factory/issues"
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+asyncio_mode = "auto"

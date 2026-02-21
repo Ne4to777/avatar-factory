@@ -60,22 +60,53 @@
 
 ## 📦 Установка
 
-### 🚀 Быстрая установка (одна команда)
+### ⚡ Выбор метода установки
+
+У нас есть **5 способов** установки на выбор:
+
+| Метод | Команда | Когда использовать |
+|-------|---------|-------------------|
+| **Make** | `make install` | Ежедневная разработка (рекомендуется ⭐) |
+| **npm** | `npm run install:full` | Быстрый старт без доп. инструментов |
+| **Shell Script** | `./install.sh` | Первая установка (интерактивно) |
+| **Just** | `just install` | Современная альтернатива Make |
+| **Docker** | `docker-compose up` | Production deployment |
+
+**Не знаете что выбрать?** → [WHICH_METHOD.md](./WHICH_METHOD.md)  
+**Полное сравнение:** → [INSTALLATION_METHODS.md](./INSTALLATION_METHODS.md)
+
+### 🎯 Рекомендуемая установка
 
 ```bash
-# Универсальный установщик
-curl -sSL https://raw.githubusercontent.com/Ne4to777/avatar-factory/main/quick-start.sh | bash
-```
-
-Или клонируйте и запустите локально:
-
-```bash
+# 1. Клонируйте репозиторий
 git clone https://github.com/Ne4to777/avatar-factory.git
 cd avatar-factory
-./quick-start.sh
+
+# 2a. Установка через Make (рекомендуется)
+make install
+make dev      # Terminal 1: UI
+make worker   # Terminal 2: Worker
+
+# 2b. Или через npm (проще)
+npm run install:full
+npm run start:dev
+
+# 2c. Или интерактивный shell script
+./install.sh
+./start.sh
 ```
 
-Скрипт автоматически определит тип вашей машины и установит нужные компоненты!
+**GPU Worker (стационарный ПК):**
+
+```bash
+cd gpu-worker
+
+# Windows
+install.bat && start.bat
+
+# Linux/macOS
+make install && make start
+```
 
 ### 📖 Детальная установка
 
