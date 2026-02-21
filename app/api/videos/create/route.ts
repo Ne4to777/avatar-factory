@@ -24,8 +24,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createVideoSchema.parse(body);
     
-    // TODO: Получить userId из сессии (пока используем тестовый)
-    const userId = 'test-user-id';
+    // TODO: Получить userId из сессии (пока создаем тестового пользователя)
+    let userId = 'test-user-id';
+    
+    // Создаем тестового пользователя если не существует
+    const testUser = await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: {
+        id: userId,
+        email: 'test@avatar-factory.local',
+        name: 'Test User',
+      },
+    });
+    
+    userId = testUser.id;
     
     // Проверка: должен быть либо photoUrl, либо avatarId
     if (!data.photoUrl && !data.avatarId) {
