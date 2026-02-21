@@ -138,19 +138,16 @@ docs/
 ## 🎓 Уровни документации
 
 ### 🟢 Для начинающих
-- QUICKSTART.md
-- WHICH_METHOD.md
-- INSTALL_GUIDE.md
+- QUICKSTART.md - Быстрый старт
+- INSTALL_GUIDE.md - Установка
 
 ### 🟡 Для разработчиков
-- BUILD_TOOLS.md
-- SCRIPTS_README.md
-- INSTALLATION_METHODS.md
+- BUILD_TOOLS.md - Build инструменты
+- PROJECT_SUMMARY.md - Архитектура
 
-### 🔴 Для advanced пользователей
-- DEPLOYMENT.md
-- PROJECT_SUMMARY.md
-- TEST_RESULTS.md
+### 🔴 Для advanced
+- DEPLOYMENT.md - Production
+- TEST_RESULTS.md - Тесты
 
 ---
 

@@ -62,18 +62,14 @@
 
 ### ⚡ Выбор метода установки
 
-У нас есть **5 способов** установки на выбор:
-
 | Метод | Команда | Когда использовать |
 |-------|---------|-------------------|
-| **Make** | `make install` | Ежедневная разработка (рекомендуется ⭐) |
-| **npm** | `npm run install:full` | Быстрый старт без доп. инструментов |
+| **Make** | `make install` | Рекомендуется для разработки ⭐ |
+| **npm** | `npm run install:full` | Быстрый старт |
 | **Shell Script** | `./install.sh` | Первая установка (интерактивно) |
-| **Just** | `just install` | Современная альтернатива Make |
 | **Docker** | `docker-compose up` | Production deployment |
 
-**Не знаете что выбрать?** → [WHICH_METHOD.md](./docs/WHICH_METHOD.md)  
-**Полное сравнение:** → [INSTALLATION_METHODS.md](./docs/INSTALLATION_METHODS.md)
+**Документация:** [docs/](./docs/)
 
 ### 🎯 Рекомендуемая установка
 
@@ -82,18 +78,17 @@
 git clone https://github.com/Ne4to777/avatar-factory.git
 cd avatar-factory
 
-# 2a. Установка через Make (рекомендуется)
+# 2. Установка через Make (рекомендуется)
 make install
 make dev      # Terminal 1: UI
 make worker   # Terminal 2: Worker
 
-# 2b. Или через npm (проще)
+# Или через npm
 npm run install:full
 npm run start:dev
 
-# 2c. Или интерактивный shell script
+# Или интерактивно
 ./install.sh
-./start.sh
 ```
 
 **GPU Worker (стационарный ПК):**
@@ -123,11 +118,26 @@ npm install
 
 ### 3. Настройте базу данных
 ```bash
-# Запустите PostgreSQL, Redis, MinIO через Docker
-docker-compose up -d postgres redis minio
+# Запустите инфраструктуру через Docker
+docker-compose up -d
 
 # Примените миграции
 npm run prisma:migrate
+```
+
+**Docker Compose Profiles:**
+```bash
+# Только инфраструктура (default)
+docker-compose up -d
+
+# + Приложение и Worker
+docker-compose --profile app up -d
+
+# + GPU Worker (если на той же машине)
+docker-compose --profile gpu up -d
+
+# Все вместе
+docker-compose --profile full up -d
 ```
 
 ### 4. Настройте GPU Worker (стационарный ПК)

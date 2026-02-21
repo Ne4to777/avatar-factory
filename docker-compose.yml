@@ -1,30 +1,47 @@
 version: '3.8'
 
+# Avatar Factory - Docker Compose with Profiles
+# 
+# Usage:
+#   docker-compose up -d                    # Infrastructure only (default)
+#   docker-compose --profile app up -d      # Infrastructure + App + Worker
+#   docker-compose --profile gpu up -d      # Infrastructure + GPU Worker
+#   docker-compose --profile full up -d     # Everything
+#   docker-compose --profile prod up -d     # Production with Nginx
+
 services:
+  # ============================================================================
+  # INFRASTRUCTURE (always runs)
+  # ============================================================================
+
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: avatar-factory-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: avatar
-      POSTGRES_PASSWORD: avatar_password
-      POSTGRES_DB: avatar_factory
+      POSTGRES_USER: ${POSTGRES_USER:-avatar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-avatar_password}
+      POSTGRES_DB: ${POSTGRES_DB:-avatar_factory}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U avatar"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - avatar-network
 
   # Redis (Queue & Cache)
   redis:
     image: redis:7-alpine
     container_name: avatar-factory-redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -33,17 +50,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - avatar-network
 
   # MinIO (S3-compatible storage)
   minio:
     image: minio/minio:latest
     container_name: avatar-factory-minio
-    ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # Console
+    restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -52,38 +72,202 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - avatar-network
 
-  # MinIO Client (создает bucket при старте)
+  # MinIO Setup (creates bucket)
   minio-setup:
     image: minio/mc:latest
     container_name: avatar-factory-minio-setup
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      sleep 10;
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
       /usr/bin/mc mb myminio/avatar-videos --ignore-existing;
       /usr/bin/mc anonymous set download myminio/avatar-videos;
       exit 0;
       "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    networks:
+      - avatar-network
 
-  # Adminer (Database UI - опционально)
+  # Adminer (Database UI)
   adminer:
     image: adminer:latest
     container_name: avatar-factory-adminer
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${ADMINER_PORT:-8080}:8080"
     depends_on:
       - postgres
+    networks:
+      - avatar-network
+
+  # ============================================================================
+  # APPLICATION (profile: app, full)
+  # ============================================================================
+
+  # Main Application
+  app:
+    profiles: ["app", "full"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: avatar-factory-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
-      ADMINER_DEFAULT_SERVER: postgres
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-avatar}:${POSTGRES_PASSWORD:-avatar_password}@postgres:5432/${POSTGRES_DB:-avatar_factory}
+      - REDIS_URL=redis://redis:6379
+      - GPU_SERVER_URL=${GPU_SERVER_URL:-http://gpu-worker:8001}
+      - GPU_API_KEY=${GPU_API_KEY:-your-secret-key}
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    networks:
+      - avatar-network
+
+  # Video Worker
+  worker:
+    profiles: ["app", "full"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: avatar-factory-worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-avatar}:${POSTGRES_PASSWORD:-avatar_password}@postgres:5432/${POSTGRES_DB:-avatar_factory}
+      - REDIS_URL=redis://redis:6379
+      - GPU_SERVER_URL=${GPU_SERVER_URL:-http://gpu-worker:8001}
+      - GPU_API_KEY=${GPU_API_KEY:-your-secret-key}
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
+    command: ["node", "workers/video-worker.js"]
+    networks:
+      - avatar-network
+
+  # ============================================================================
+  # GPU WORKER (profile: gpu, full)
+  # Note: GPU worker typically runs on a separate machine
+  # This is here for local testing or single-machine deployments
+  # ============================================================================
+
+  gpu-worker:
+    profiles: ["gpu", "full"]
+    build:
+      context: ./gpu-worker
+      dockerfile: Dockerfile
+    container_name: avatar-factory-gpu-worker
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - GPU_API_KEY=${GPU_API_KEY:-your-secret-key}
+      - HOST=0.0.0.0
+      - PORT=8001
+      - CUDA_VISIBLE_DEVICES=0
+    ports:
+      - "${GPU_PORT:-8001}:8001"
+    volumes:
+      - ./gpu-worker/checkpoints:/app/checkpoints
+      - ./gpu-worker/models:/app/models
+      - gpu_temp:/tmp/avatar-factory
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 5m
+    networks:
+      - avatar-network
+
+  # ============================================================================
+  # NGINX (profile: prod)
+  # Reverse proxy for production
+  # ============================================================================
+
+  nginx:
+    profiles: ["prod"]
+    image: nginx:alpine
+    container_name: avatar-factory-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - avatar-network
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  gpu_temp:
 
 networks:
-  default:
-    name: avatar-factory-network
+  avatar-network:
+    driver: bridge
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+#
+# Development (laptop - infrastructure only):
+#   docker-compose up -d
+#   npm run dev        # Terminal 1
+#   npm run worker     # Terminal 2
+#
+# Development with App in Docker:
+#   docker-compose --profile app up -d
+#
+# Testing with GPU (if on same machine):
+#   docker-compose --profile gpu up -d
+#
+# Full stack (everything in Docker):
+#   docker-compose --profile full up -d
+#
+# Production with Nginx:
+#   docker-compose --profile full --profile prod up -d
+#
+# Stop all:
+#   docker-compose --profile full --profile prod down
+#
+# View logs:
+#   docker-compose logs -f
+#   docker-compose --profile app logs -f app worker
+#
+# Clean everything:
+#   docker-compose --profile full --profile prod down -v

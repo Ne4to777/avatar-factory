@@ -72,7 +72,13 @@ setup-docker:
 	docker-compose down || true
 	docker-compose up -d
 	@sleep 5
+	docker-compose ps
 	@echo -e "$(GREEN)✓ Docker infrastructure ready$(NC)"
+	@echo ""
+	@echo -e "$(BLUE)Available profiles:$(NC)"
+	@echo "  --profile app    # Add App + Worker"
+	@echo "  --profile gpu    # Add GPU Worker"
+	@echo "  --profile full   # Everything"
 
 # 🗄️ Настройка базы данных
 setup-db:
