@@ -73,7 +73,7 @@ async function testVideoGeneration() {
     console.log('3️⃣  Creating video (minimal settings)...');
     const createRes = await axios.post(`${API_URL}/api/videos/create`, {
       photoUrl: avatarUrl,
-      text: 'Test', // Минимальный текст
+      text: 'Привет мир!', // Русский текст для Silero TTS
       backgroundStyle: 'simple',
       voiceId: 'ru_speaker_female',
       format: 'VERTICAL'
@@ -92,13 +92,13 @@ async function testVideoGeneration() {
 
     while (Date.now() - startTime < MAX_WAIT_TIME) {
       const statusRes = await axios.get(`${API_URL}/api/videos/${videoId}`);
-      const video = statusRes.data;
+      const video = statusRes.data.video; // API возвращает { video: {...}, job: {...} }
 
       if (video.status !== lastStatus) {
         const elapsed = Math.round((Date.now() - startTime) / 1000);
         console.log(`   [${elapsed}s] Status: ${video.status}`);
-        if (video.error) {
-          console.log(`   ❌ Error: ${video.error}`);
+        if (video.errorMessage) {
+          console.log(`   ❌ Error: ${video.errorMessage}`);
         }
         if (video.progress) {
           console.log(`   Progress: ${video.progress}%`);
@@ -111,14 +111,13 @@ async function testVideoGeneration() {
         console.log(`   Video URL: ${video.videoUrl}`);
         console.log(`   Thumbnail: ${video.thumbnailUrl}`);
         console.log(`   Duration: ${video.duration}s`);
-        console.log(`   Format: ${video.format}`);
-        console.log(`   Quality: ${video.quality}\n`);
+        console.log(`   Format: ${video.format}\n`);
         return true;
       }
 
       if (video.status === 'FAILED') {
         console.log(`\n❌ VIDEO GENERATION FAILED`);
-        console.log(`   Error: ${video.error}\n`);
+        console.log(`   Error: ${video.errorMessage}\n`);
         return false;
       }
 

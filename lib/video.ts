@@ -188,23 +188,23 @@ export async function composeVideo(options: ComposeVideoOptions): Promise<string
 export async function generateThumbnail(
   videoPath: string,
   outputPath?: string,
-  timePosition: string = '00:00:01'
+  timePosition: string = '00:00:00.1'
 ): Promise<string> {
   await ensureTempDir();
   
   const thumbnailPath = outputPath || path.join(
     TEMP_DIR,
-    `thumb_${nanoid()}.jpg`
+    `thumb_${nanoid()}.png`
   );
   
   return new Promise((resolve, reject) => {
+    // Простая генерация первого кадра как PNG
     ffmpeg(videoPath)
-      .screenshots({
-        timestamps: [timePosition],
-        filename: path.basename(thumbnailPath),
-        folder: path.dirname(thumbnailPath),
-        size: '1080x1920',
-      })
+      .outputOptions([
+        '-vframes', '1',
+        '-update', '1'
+      ])
+      .output(thumbnailPath)
       .on('end', () => {
         console.log(`✅ Thumbnail created: ${thumbnailPath}`);
         resolve(thumbnailPath);
@@ -212,7 +212,8 @@ export async function generateThumbnail(
       .on('error', (err) => {
         console.error('❌ Thumbnail error:', err);
         reject(err);
-      });
+      })
+      .run();
   });
 }
 
