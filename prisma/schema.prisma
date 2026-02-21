@@ -1,0 +1,129 @@
+// Prisma Schema for Avatar Factory
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  
+  videos    Video[]
+  avatars   Avatar[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+}
+
+model Avatar {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  photoUrl    String
+  style       String   @default("photorealistic")
+  
+  videos      Video[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+model Video {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  avatarId        String?
+  avatar          Avatar?  @relation(fields: [avatarId], references: [id], onDelete: SetNull)
+  
+  // Input
+  text            String   @db.Text
+  photoUrl        String?
+  voiceId         String   @default("ru_speaker_female")
+  backgroundStyle String   @default("modern-office")
+  backgroundUrl   String?
+  
+  // Processing
+  status          VideoStatus @default(PENDING)
+  progress        Int         @default(0)
+  errorMessage    String?     @db.Text
+  
+  // Output
+  videoUrl        String?
+  thumbnailUrl    String?
+  duration        Int?        // seconds
+  format          VideoFormat @default(VERTICAL)
+  
+  // Metadata
+  audioPath       String?
+  processedAt     DateTime?
+  viewCount       Int         @default(0)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Background {
+  id          String   @id @default(cuid())
+  
+  name        String
+  prompt      String?  @db.Text
+  category    String   @default("general")
+  imageUrl    String
+  thumbnailUrl String?
+  
+  isGenerated Boolean  @default(false)
+  isPublic    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([category])
+  @@index([isPublic])
+}
+
+model VoicePreset {
+  id          String   @id @default(cuid())
+  
+  name        String
+  language    String   @default("ru-RU")
+  gender      String   @default("female")
+  voiceId     String   @unique
+  
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([language])
+  @@index([isActive])
+}
+
+enum VideoStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum VideoFormat {
+  VERTICAL   // 9:16 (Reels/Shorts)
+  HORIZONTAL // 16:9 (YouTube)
+  SQUARE     // 1:1 (Instagram)
+}

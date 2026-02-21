@@ -1,0 +1,40 @@
+# FastAPI Server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# PyTorch (install separately with CUDA)
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# AI Models
+diffusers==0.25.1
+transformers==4.37.0
+accelerate==0.26.1
+safetensors==0.4.1
+xformers==0.0.23.post1
+
+# Audio
+soundfile==0.12.1
+librosa==0.10.1
+pydub==0.25.1
+
+# Image Processing
+opencv-python==4.9.0.80
+pillow==10.2.0
+imageio==2.33.1
+imageio-ffmpeg==0.4.9
+
+# Face Enhancement
+gfpgan==1.3.8
+realesrgan==0.3.0
+
+# Utilities
+numpy==1.26.3
+scipy==1.11.4
+tqdm==4.66.1
+omegaconf==2.3.0
+einops==0.7.0
+
+# Git repos (install after pip install -r requirements.txt)
+# SadTalker: git clone https://github.com/OpenTalker/SadTalker.git
+# Then: cd SadTalker && pip install -r requirements.txt
