@@ -222,11 +222,11 @@ function Test-FileChecksum {
 function Write-Log {
     param(
         [string]$Message,
-        [string]$LogPath = "logs\install.log"
+        [string]$LogPath = 'logs\install.log'
     )
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] $Message"
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $logMessage = '[{0}] {1}' -f $timestamp, $Message
 
     # Ensure log directory exists
     $logDir = Split-Path $LogPath -Parent
