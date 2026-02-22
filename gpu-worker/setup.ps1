@@ -19,6 +19,7 @@ $null = Set-Location $PSScriptRoot
 
 # Configuration
 $LOG_FILE = Join-Path $PSScriptRoot "logs\install.log"
+
 $VENV_PATH = "venv"
 $PYTHON_VERSION_MIN = "3.10"
 $CUDA_VERSION_RECOMMENDED = "11.8"
@@ -549,7 +550,7 @@ LOG_LEVEL=INFO
 
     Write-Success ".env file created"
     Write-Host ""
-    Write-Host "  $($Colors.Yellow)═══════════════════════════════════════════════════════════$($Colors.Reset)"
+    Write-Host "  $($Colors.Yellow)===============================================================$($Colors.Reset)"
     Write-Host "  $($Colors.Yellow)IMPORTANT: Save these values for laptop configuration$($Colors.Reset)"
     Write-Host ""
     Write-Host "  GPU Server URL:  $($Colors.Green)http://${localIP}:8001$($Colors.Reset)"
@@ -558,7 +559,7 @@ LOG_LEVEL=INFO
     Write-Host "  Add to laptop's .env file:"
     Write-Host "  $($Colors.Cyan)GPU_SERVER_URL=http://${localIP}:8001$($Colors.Reset)"
     Write-Host "  $($Colors.Cyan)GPU_API_KEY=$apiKey$($Colors.Reset)"
-    Write-Host "  $($Colors.Yellow)═══════════════════════════════════════════════════════════$($Colors.Reset)"
+    Write-Host "  $($Colors.Yellow)===============================================================$($Colors.Reset)"
     Write-Host ""
 
     Write-Log "Environment configured - IP: $localIP, API Key: $($apiKey.Substring(0,8))..." -LogPath $LOG_FILE
@@ -664,9 +665,9 @@ Invoke-Step "Installation Test" {
 
 # === Installation Complete ===
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "===============================================================" -ForegroundColor Green
 Write-Host "$($Colors.Green)[OK] Installation Complete!$($Colors.Reset)" -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "===============================================================" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "$($Colors.Blue)Installation Summary:$($Colors.Reset)"
