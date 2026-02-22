@@ -91,7 +91,7 @@ app.add_middleware(
 )
 
 # Global models (загружаются при старте)
-sadtalker_model = None
+musetalk_model = None  # Replaced sadtalker with MuseTalk
 sd_pipeline = None
 tts_model = None
 
@@ -103,7 +103,7 @@ def verify_api_key(x_api_key: str = Header()):
 @app.on_event("startup")
 async def load_models():
     """Загрузка AI моделей при старте сервера"""
-    global sadtalker_model, sd_pipeline, tts_model
+    global musetalk_model, sd_pipeline, tts_model
     
     logger.info("="*60)
     logger.info("STARTUP: Loading AI models...")
@@ -129,26 +129,24 @@ async def load_models():
         raise
     
     try:
-        # 1. SadTalker (lip-sync)
+        # 1. MuseTalk (lip-sync) - replaces SadTalker
         logger.info("="*60)
-        logger.info("STEP 2: Loading SadTalker...")
+        logger.info("STEP 2: Loading MuseTalk...")
         logger.info(f"Current directory: {os.getcwd()}")
-        logger.info(f"SadTalker path exists: {os.path.exists('SadTalker')}")
-        logger.info(f"sadtalker_inference.py exists: {os.path.exists('sadtalker_inference.py')}")
+        logger.info(f"MuseTalk path exists: {os.path.exists('MuseTalk')}")
+        logger.info(f"musetalk_inference.py exists: {os.path.exists('musetalk_inference.py')}")
         
         try:
-            from sadtalker_inference import SadTalkerInference
-            logger.info("SadTalkerInference imported")
+            from musetalk_inference import MuseTalkInference
+            logger.info("MuseTalkInference imported")
             
-            sadtalker_model = SadTalkerInference(
-                checkpoint_path="./checkpoints",
-                device="cuda"
-            )
-            logger.info("SadTalker initialized successfully")
+            musetalk_model = MuseTalkInference(device="cuda")
+            logger.info("MuseTalk initialized successfully - real-time lip-sync ready")
         except Exception as e:
-            logger.warning(f"SadTalker failed to load: {type(e).__name__}: {e}")
-            logger.warning("SadTalker will not be available (lip-sync disabled)")
-            sadtalker_model = None
+            logger.warning(f"MuseTalk failed to load: {type(e).__name__}: {e}")
+            logger.warning("MuseTalk will not be available (lip-sync disabled)")
+            logger.warning("To install: powershell -ExecutionPolicy Bypass -File install-musetalk.ps1")
+            musetalk_model = None
         
         # 2. Stable Diffusion XL (backgrounds)
         logger.info("="*60)
@@ -187,12 +185,35 @@ async def load_models():
         
         try:
             logger.info("Downloading/loading from torch.hub...")
-            tts_model, _ = torch.hub.load(
-                repo_or_dir='snakers4/silero-models',
-                model='silero_tts',
-                language='ru',
-                speaker='v3_1_ru'
-            )
+            
+            # Попытка загрузки с автоматической очисткой кеша при ошибке
+            try:
+                tts_model, _ = torch.hub.load(
+                    repo_or_dir='snakers4/silero-models',
+                    model='silero_tts',
+                    language='ru',
+                    speaker='v3_1_ru'
+                )
+            except FileNotFoundError as cache_error:
+                # Поврежденный кеш torch.hub - очищаем и пробуем снова
+                logger.warning(f"Torch hub cache corrupted: {cache_error}")
+                logger.info("Clearing torch hub cache and retrying...")
+                
+                import shutil
+                cache_dir = Path.home() / ".cache" / "torch" / "hub" / "snakers4_silero-models_master"
+                if cache_dir.exists():
+                    shutil.rmtree(cache_dir)
+                    logger.info(f"Cleared cache: {cache_dir}")
+                
+                # Повторная попытка с force_reload
+                tts_model, _ = torch.hub.load(
+                    repo_or_dir='snakers4/silero-models',
+                    model='silero_tts',
+                    language='ru',
+                    speaker='v3_1_ru',
+                    force_reload=True
+                )
+            
             logger.info(f"Model downloaded, type: {type(tts_model)}")
             
             # Silero TTS .to() mutates in-place and returns None, don't reassign
@@ -207,9 +228,9 @@ async def load_models():
         
         logger.info("="*60)
         logger.info("STARTUP COMPLETE!")
-        logger.info(f"SadTalker: {'OK' if sadtalker_model else 'DISABLED'}")
-        logger.info(f"Stable Diffusion: {'OK' if sd_pipeline else 'DISABLED'}")
-        logger.info(f"TTS: {'OK' if tts_model else 'DISABLED'}")
+        logger.info(f"MuseTalk (Lip-sync): {'OK' if musetalk_model else 'DISABLED'}")
+        logger.info(f"Stable Diffusion XL: {'OK' if sd_pipeline else 'DISABLED'}")
+        logger.info(f"Silero TTS: {'OK' if tts_model else 'DISABLED'}")
         logger.info("="*60)
         
     except Exception as e:
@@ -244,7 +265,7 @@ async def health():
                 "utilization_percent": round((vram_used / vram_total) * 100, 1)
             },
             "models": {
-                "sadtalker": sadtalker_model is not None,
+                "musetalk": musetalk_model is not None,
                 "stable_diffusion": sd_pipeline is not None,
                 "silero_tts": tts_model is not None
             }
@@ -287,13 +308,21 @@ async def text_to_speech(
 async def create_lipsync(
     image: UploadFile = File(...),
     audio: UploadFile = File(...),
+    bbox_shift: int = 0,
+    batch_size: int = 8,
+    fps: int = 25,
     x_api_key: str = Header()
 ):
-    """Создание говорящего аватара (SadTalker)"""
+    """Создание говорящего аватара (MuseTalk - real-time lip-sync)"""
     verify_api_key(x_api_key)
+    
+    if musetalk_model is None:
+        logger.error("MuseTalk not loaded")
+        raise HTTPException(status_code=503, detail="MuseTalk not available - run install-musetalk.ps1")
     
     try:
         logger.info(f"Lip-sync request: {image.filename}, {audio.filename}")
+        logger.info(f"  Parameters: bbox_shift={bbox_shift}, batch_size={batch_size}, fps={fps}")
         
         # Сохранение входных файлов
         image_path = TEMP_DIR / f"img_{os.urandom(8).hex()}{Path(image.filename).suffix}"
@@ -304,22 +333,26 @@ async def create_lipsync(
         with open(audio_path, "wb") as f:
             f.write(await audio.read())
         
-        # Генерация видео
+        logger.info(f"Input files saved: {image_path.name}, {audio_path.name}")
+        
+        # Генерация видео через MuseTalk
         output_path = TEMP_DIR / f"video_{os.urandom(8).hex()}.mp4"
         
-        sadtalker_model.generate(
-            source_image=str(image_path),
-            driven_audio=str(audio_path),
+        musetalk_model.generate(
+            image_path=str(image_path),
+            audio_path=str(audio_path),
             output_path=str(output_path),
-            preprocess="crop",
-            enhancer="gfpgan"  # улучшение качества лица
+            bbox_shift=bbox_shift,
+            batch_size=batch_size,
+            fps=fps
         )
         
-        logger.info(f"✅ Lip-sync generated: {output_path}")
+        logger.info(f"[OK] Lip-sync video generated: {output_path}")
         
         # Очистка входных файлов
         image_path.unlink()
         audio_path.unlink()
+        logger.info("Cleaned up input files")
         
         return FileResponse(output_path, media_type="video/mp4")
         

@@ -28,7 +28,7 @@
 │     RTX 4070 Ti 12GB                │
 │                                     │
 │  Open-Source AI Models:             │
-│  • SadTalker (lip-sync)             │
+│  • MuseTalk (real-time lip-sync)    │
 │  • Silero TTS (русская озвучка)     │
 │  • Stable Diffusion XL (фоны)       │
 │  • Real-ESRGAN (upscaling)          │
@@ -47,7 +47,7 @@
 - **Tailwind CSS** - Стилизация
 
 ### AI Models (Python - минимум)
-- **SadTalker** - Анимация лица с lip-sync
+- **MuseTalk** - Real-time lip-sync анимация (в 3-4x быстрее SadTalker)
 - **Silero Models** - Русский TTS (отличное качество)
 - **Stable Diffusion XL** - Генерация фонов
 - **Real-ESRGAN** - Улучшение качества
