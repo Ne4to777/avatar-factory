@@ -10,33 +10,6 @@ Check the permissions.
 
 ---
 
-## ⚙️ Требования (важно!)
-
-MuseTalk требует **Visual Studio Build Tools** для компиляции C++ расширений (`mmcv`, `mmpose`, `mmdet`).
-
-### Проверьте что Build Tools установлены:
-
-```cmd
-where cl
-```
-
-Если видите путь (например `C:\Program Files\Microsoft Visual Studio\...`), всё ОК.
-
-### Если Build Tools НЕ установлены:
-
-1. Скачайте: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
-2. Запустите установщик
-3. Выберите: **"Desktop development with C++"**
-4. Установите (требуется ~6 GB)
-5. Перезагрузите компьютер
-
-**Без Build Tools установка MuseTalk провалится с ошибкой:**
-```
-error: Microsoft Visual C++ 14.0 or greater is required
-```
-
----
-
 ## ✅ Решение (4 команды)
 
 ### 1️⃣ Остановите сервер
