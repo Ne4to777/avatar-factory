@@ -371,43 +371,65 @@ if (-not $step6) { exit 1 }
 
 # === STEP 7: Install Python Dependencies ===
 $step7 = Invoke-Step "Python Dependencies" {
-    Write-Info "Installing Python dependencies from requirements.txt..."
-    if (-not $Silent) {
-        Write-Host "  This may take 3-5 minutes..."
-        Write-Host ""
-    }
+    Write-Info "Checking Python dependencies..."
 
     if (-not (Test-Path "requirements.txt")) {
         throw "requirements.txt not found"
     }
 
     $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
-    $pipArgs = @(
-        "-m", "pip",
-        "install",
-        "-r",
-        "requirements.txt"
-    )
-
-    if ($Silent) {
-        $pipArgs += "--quiet"
+    
+    # Check if key packages are already installed
+    $needsInstall = $false
+    $keyPackages = @("fastapi", "uvicorn", "diffusers", "transformers")
+    
+    if (-not $Force) {
+        foreach ($pkg in $keyPackages) {
+            $installed = & $venvPython -c "import $pkg" 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                $needsInstall = $true
+                break
+            }
+        }
     }
     else {
-        Write-Host "  Progress will be shown below..."
-        Write-Host ""
+        $needsInstall = $true
     }
+    
+    if ($needsInstall) {
+        Write-Info "Installing Python dependencies from requirements.txt..."
+        if (-not $Silent) {
+            Write-Host "  This may take 3-5 minutes..."
+            Write-Host "  Progress will be shown below..."
+            Write-Host ""
+        }
 
-    # Show output in real-time
-    & $venvPython @pipArgs
-    $exitCode = $LASTEXITCODE
+        $pipArgs = @(
+            "-m", "pip",
+            "install",
+            "-r",
+            "requirements.txt"
+        )
 
-    if ($exitCode -ne 0) {
-        Write-Host ""
-        Write-ErrorMsg "Dependencies installation failed with exit code: $exitCode"
-        throw "Failed to install Python dependencies (exit code: $exitCode)"
+        if ($Silent) {
+            $pipArgs += "--quiet"
+        }
+
+        # Show output in real-time
+        & $venvPython @pipArgs
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -ne 0) {
+            Write-Host ""
+            Write-ErrorMsg "Dependencies installation failed with exit code: $exitCode"
+            throw "Failed to install Python dependencies (exit code: $exitCode)"
+        }
+
+        Write-Success "Python dependencies installed"
     }
-
-    Write-Success "Python dependencies installed"
+    else {
+        Write-Success "Python dependencies already installed"
+    }
 
     # Verify key packages (non-critical - will be tested properly in Step 12)
     Write-Info "Quick verification of key packages..."
@@ -445,10 +467,18 @@ if (-not $step7) { exit 1 }
 
 # === STEP 7.5: Install xformers (requires PyTorch) ===
 $step7_5 = Invoke-Step "xformers Installation" {
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    
+    # Check if xformers is already installed
+    $xformersInstalled = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
+    
+    if ($xformersInstalled -and -not $Force) {
+        Write-Success "xformers already installed: $xformersInstalled"
+        return
+    }
+    
     Write-Info "Installing xformers (memory-efficient attention)..."
     Write-Info "This requires PyTorch and may take a few minutes..."
-
-    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
     
     # Try to install xformers (flexible version for compatibility)
     $xformersArgs = @(
@@ -520,19 +550,32 @@ $step8 = Invoke-Step "SadTalker Setup" {
         Write-Success "SadTalker cloned"
     }
 
-    # Install/Update SadTalker dependencies (always run, even if already cloned)
-    Write-Info "Installing SadTalker dependencies..."
+    # Install/Update SadTalker dependencies
+    Write-Info "Checking SadTalker dependencies..."
     
     # Get full path to venv python before changing directory
     $venvPythonPath = Resolve-Path (Join-Path $VENV_PATH "Scripts\python.exe")
 
     Push-Location "SadTalker"
     try {
-        if (Test-Path "requirements.txt") {
+        if (-not (Test-Path "requirements.txt")) {
+            Write-WarningMsg "SadTalker requirements.txt not found"
+            return
+        }
+        
+        # Check if key SadTalker package (kornia) is installed
+        $korniaInstalled = & $venvPythonPath -c "import kornia" 2>$null
+        
+        if ($korniaInstalled -and -not $Force) {
+            Write-Success "SadTalker dependencies already installed"
+        }
+        else {
+            Write-Info "Installing SadTalker dependencies..."
+            
             $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
             if ($Silent) { $sadPipArgs += "--quiet" }
             else {
-                Write-Host "  Installing SadTalker dependencies (this may take a few minutes)..."
+                Write-Host "  This may take a few minutes..."
                 Write-Host ""
             }
             
@@ -548,9 +591,6 @@ $step8 = Invoke-Step "SadTalker Setup" {
                 Write-ErrorMsg "SadTalker dependencies installation failed"
                 throw "Failed to install SadTalker dependencies (exit code: $exitCode)"
             }
-        }
-        else {
-            Write-WarningMsg "SadTalker requirements.txt not found"
         }
     }
     finally {
