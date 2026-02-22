@@ -453,7 +453,262 @@ $step8 = Invoke-Step "SadTalker Setup" {
 }
 if (-not $step8) { exit 1 }
 
-# More steps will be added in next task...
+# === STEP 9: Download AI Models ===
+if (-not $SkipModels) {
+    Invoke-Step "AI Models Download" {
+        Write-Info "Downloading AI models..."
 
-Write-Success "Setup completed!"
+        if ($Silent) {
+            Write-WarningMsg "Silent mode: skipping model download"
+            Write-Info "You can download models later by running: python download_models.py"
+            return
+        }
+
+        Write-Host ""
+        Write-Host "  $($Colors.Yellow)This will download approximately 10GB of data$($Colors.Reset)"
+        Write-Host "  $($Colors.Yellow)and may take 15-30 minutes depending on your internet speed$($Colors.Reset)"
+        Write-Host ""
+
+        $proceed = Read-Host "  Download models now? (Y/n)"
+        if ($proceed -match "^[Nn]$") {
+            Write-WarningMsg "Skipping model download"
+            Write-Info "You can download models later by running: python download_models.py"
+            return
+        }
+
+        if (-not (Test-Path "download_models.py")) {
+            Write-WarningMsg "download_models.py not found, skipping automatic download"
+            Write-Info "You may need to download models manually"
+            return
+        }
+
+        Write-Info "Starting model download..."
+        python download_models.py
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Models downloaded successfully"
+            $script:InstallationState.ModelsDownloaded = $true
+        }
+        else {
+            Write-WarningMsg "Model download had errors"
+            Write-Info "You can retry later: python download_models.py"
+        }
+    }
+}
+
+# === STEP 10: Environment Configuration ===
+Invoke-Step "Environment Configuration" {
+    Write-Info "Configuring environment..."
+
+    $envFile = ".env"
+    $envExists = Test-Path $envFile
+
+    if ($envExists -and -not $Force) {
+        Write-Success ".env file already exists"
+
+        $existingConfig = Get-Content $envFile | Out-String
+
+        if ($existingConfig -match "GPU_API_KEY=(.+)") {
+            $apiKey = $Matches[1].Trim()
+            $displayKey = $apiKey.Substring(0, [Math]::Min(8, $apiKey.Length))
+            Write-Info "Using existing API key: ${displayKey}..."
+        }
+
+        $script:InstallationState.EnvConfigured = $true
+        return
+    }
+
+    Write-Info "Creating .env file..."
+
+    $apiKey = New-SecureRandomString -Length 32
+    $localIP = Get-LocalIPAddress
+
+    $envContent = @"
+# Avatar Factory GPU Worker Configuration
+# Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+
+# Security
+GPU_API_KEY=$apiKey
+
+# Server
+HOST=0.0.0.0
+PORT=8001
+
+# GPU Settings
+CUDA_VISIBLE_DEVICES=0
+
+# Logging
+LOG_LEVEL=INFO
+"@
+
+    Set-Content -Path $envFile -Value $envContent -Encoding UTF8
+
+    $file = Get-Item $envFile
+    $file.Attributes = $file.Attributes -bor [System.IO.FileAttributes]::Hidden
+    $file.IsReadOnly = $true
+
+    Write-Success ".env file created"
+    Write-Host ""
+    Write-Host "  $($Colors.Yellow)═══════════════════════════════════════════════════════════$($Colors.Reset)"
+    Write-Host "  $($Colors.Yellow)IMPORTANT: Save these values for laptop configuration$($Colors.Reset)"
+    Write-Host ""
+    Write-Host "  GPU Server URL:  $($Colors.Green)http://${localIP}:8001$($Colors.Reset)"
+    Write-Host "  API Key:         $($Colors.Green)$apiKey$($Colors.Reset)"
+    Write-Host ""
+    Write-Host "  Add to laptop's .env file:"
+    Write-Host "  $($Colors.Cyan)GPU_SERVER_URL=http://${localIP}:8001$($Colors.Reset)"
+    Write-Host "  $($Colors.Cyan)GPU_API_KEY=$apiKey$($Colors.Reset)"
+    Write-Host "  $($Colors.Yellow)═══════════════════════════════════════════════════════════$($Colors.Reset)"
+    Write-Host ""
+
+    Write-Log "Environment configured - IP: $localIP, API Key: $($apiKey.Substring(0,8))..." -LogPath $LOG_FILE
+
+    $script:InstallationState.EnvConfigured = $true
+}
+
+# === STEP 11: Firewall Configuration ===
+Invoke-Step "Firewall Configuration" {
+    if ($AdminOnly -or (Test-Administrator)) {
+        Write-Info "Configuring Windows Firewall..."
+
+        & "$PSScriptRoot\configure-firewall.ps1" -Action Add
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Firewall configured"
+            $script:InstallationState.FirewallConfigured = $true
+        }
+        else {
+            Write-WarningMsg "Firewall configuration failed"
+        }
+    }
+    else {
+        Write-WarningMsg "Firewall configuration requires administrator privileges"
+        Write-Info "Run this command as administrator later:"
+        Write-Host "  powershell -ExecutionPolicy Bypass -File configure-firewall.ps1 -Action Add" -ForegroundColor Cyan
+    }
+}
+
+# === STEP 12: Test Installation ===
+Invoke-Step "Installation Test" {
+    Write-Info "Testing installation..."
+
+    Write-Info "Testing Python imports..."
+
+    $tests = @(
+        @{ Name = "PyTorch"; Command = "import torch; print(torch.__version__)" },
+        @{ Name = "CUDA"; Command = "import torch; print('Available' if torch.cuda.is_available() else 'Not Available')" },
+        @{ Name = "FastAPI"; Command = "import fastapi; print(fastapi.__version__)" },
+        @{ Name = "Diffusers"; Command = "import diffusers; print(diffusers.__version__)" }
+    )
+
+    $allPassed = $true
+
+    foreach ($test in $tests) {
+        $result = python -c $test.Command 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  $($Colors.Green)✓$($Colors.Reset) $($test.Name): $result"
+        }
+        else {
+            Write-Host "  $($Colors.Red)✗$($Colors.Reset) $($test.Name): FAILED"
+            $allPassed = $false
+        }
+    }
+
+    if (-not $allPassed) {
+        Write-WarningMsg "Some tests failed"
+    }
+    else {
+        Write-Success "All tests passed"
+    }
+
+    if (Test-Path "server.py") {
+        Write-Info "Testing server start..."
+
+        $workDir = $PSScriptRoot
+        $venvPython = Join-Path $workDir "venv\Scripts\python.exe"
+
+        if (Test-Path $venvPython) {
+            $serverJob = Start-Job -ScriptBlock {
+                param($workDir, $venvPython)
+                Set-Location $workDir
+                & $venvPython server.py
+            } -ArgumentList $workDir, $venvPython
+
+            Start-Sleep -Seconds 5
+
+            try {
+                $response = Invoke-WebRequest -Uri "http://localhost:8001/health" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+                Write-Success "Server started successfully"
+            }
+            catch {
+                Write-WarningMsg "Server test failed (may need manual verification)"
+            }
+            finally {
+                Stop-Job $serverJob -ErrorAction SilentlyContinue
+                Remove-Job $serverJob -ErrorAction SilentlyContinue
+            }
+        }
+        else {
+            Write-WarningMsg "Virtual environment Python not found, skipping server test"
+        }
+    }
+}
+
+# === Installation Complete ===
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "$($Colors.Green)✓ Installation Complete!$($Colors.Reset)" -ForegroundColor Green
+Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "$($Colors.Blue)Installation Summary:$($Colors.Reset)"
+Write-Host ""
+
+foreach ($key in $script:InstallationState.Keys) {
+    $status = if ($script:InstallationState[$key]) { "$($Colors.Green)✓$($Colors.Reset)" } else { "$($Colors.Yellow)⊘$($Colors.Reset)" }
+    $label = $key -replace "([A-Z])", ' $1'
+    Write-Host "  $status $label"
+}
+
+Write-Host ""
+Write-Host "$($Colors.Blue)Next Steps:$($Colors.Reset)"
+Write-Host ""
+Write-Host "  1. Find your PC's IP address:"
+Write-Host "     $($Colors.Cyan)ipconfig$($Colors.Reset) (look for IPv4 Address)"
+Write-Host ""
+Write-Host "  2. Start the GPU server:"
+Write-Host "     $($Colors.Cyan).\start.bat$($Colors.Reset)"
+Write-Host ""
+Write-Host "  3. Test the server:"
+Write-Host "     $($Colors.Cyan)curl http://localhost:8001/health$($Colors.Reset)"
+Write-Host ""
+
+if (-not $NoService) {
+    Write-Host "  4. Optional: Install Windows Service for auto-start"
+    Write-Host "     $($Colors.Cyan).\service-install.ps1$($Colors.Reset)"
+    Write-Host ""
+
+    if (-not $Silent) {
+        $installService = Read-Host "  Install Windows Service now? (y/N)"
+
+        if ($installService -match "^[Yy]$") {
+            Write-Host ""
+            if (Test-Path "$PSScriptRoot\service-install.ps1") {
+                & "$PSScriptRoot\service-install.ps1"
+            }
+            else {
+                Write-WarningMsg "service-install.ps1 not found (created in Task 8)"
+            }
+        }
+    }
+}
+
+Write-Host ""
+Write-Host "$($Colors.Green)Documentation:$($Colors.Reset) README.md"
+Write-Host "$($Colors.Green)Logs:$($Colors.Reset) $LOG_FILE"
+Write-Host ""
+
+Write-Log "=== Installation Completed Successfully ===" -LogPath $LOG_FILE
+
 exit 0
