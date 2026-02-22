@@ -92,10 +92,13 @@ if exist "venv\" (
 )
 
 echo [i] Creating new venv with Python 3.10...
-py -3.10 -m venv venv
+echo Command: %PYTHON_CMD% -m venv venv
+%PYTHON_CMD% -m venv venv
 
 if errorlevel 1 (
+    echo.
     echo [ERROR] Failed to create venv
+    echo.
     pause
     exit /b 1
 )
@@ -107,4 +110,14 @@ echo.
 
 call install.bat
 
-exit /b %ERRORLEVEL%
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Installation failed
+    pause
+    exit /b 1
+)
+
+echo.
+echo [OK] Installation completed!
+pause
+exit /b 0

@@ -368,9 +368,11 @@ $step6 = Invoke-Step "PyTorch Installation" {
         Write-Host ""
     }
     
+    # Install PyTorch with matching versions to avoid dependency conflicts
     $pipArgs = @(
         "-m", "pip",
         "install",
+        "--upgrade",  # Ensure all PyTorch packages have compatible versions
         "torch",
         "torchvision",
         "torchaudio",
@@ -391,6 +393,16 @@ $step6 = Invoke-Step "PyTorch Installation" {
         Write-ErrorMsg "PyTorch installation failed with exit code: $exitCode"
         throw "Failed to install PyTorch (exit code: $exitCode)"
     }
+    
+    # Verify versions are compatible
+    Write-Info "Verifying PyTorch package versions..."
+    $torchVer = & $venvPython -c "import torch; print(torch.__version__)" 2>$null
+    $torchvisionVer = & $venvPython -c "import torchvision; print(torchvision.__version__)" 2>$null
+    $torchaudioVer = & $venvPython -c "import torchaudio; print(torchaudio.__version__)" 2>$null
+    
+    Write-Host "  torch: $torchVer"
+    Write-Host "  torchvision: $torchvisionVer"
+    Write-Host "  torchaudio: $torchaudioVer"
     
     # Quick verify (just check it imports)
     $torchVersion = & $venvPython -c "import torch; print(torch.__version__)" 2>&1
