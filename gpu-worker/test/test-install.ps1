@@ -11,7 +11,8 @@ try {
     . (Join-Path $RootDir "lib" "common.ps1")
 }
 catch {
-    $script:Colors = @{ Green = "`e[92m"; Red = "`e[91m"; Yellow = "`e[93m"; Blue = "`e[94m"; Cyan = "`e[96m"; Reset = "`e[0m" }
+    $script:ESC = [char]27
+    $script:Colors = @{ Green = "$($script:ESC)[92m"; Red = "$($script:ESC)[91m"; Yellow = "$($script:ESC)[93m"; Blue = "$($script:ESC)[94m"; Cyan = "$($script:ESC)[96m"; Reset = "$($script:ESC)[0m" }
     function Write-Success { param($Message) Write-Host "$($script:Colors.Green)PASS$($script:Colors.Reset) $Message" }
     function Write-Info { param($Message) Write-Host "$($script:Colors.Blue)INFO$($script:Colors.Reset) $Message" }
     function Write-WarningMsg { param($Message) Write-Host "$($script:Colors.Yellow)SKIP$($script:Colors.Reset) $Message" }

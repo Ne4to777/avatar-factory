@@ -206,7 +206,7 @@ $null = Test-Requirement `
     -Required $false
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===============================================================" -ForegroundColor Cyan
 
 if ($AllChecksPassed) {
     Write-Success "All critical requirements met!"
@@ -215,7 +215,7 @@ if ($AllChecksPassed) {
         Write-Host ""
         Write-WarningMsg "Optional components to install:"
         foreach ($warning in $Warnings) {
-            Write-Host "  • $warning" -ForegroundColor Yellow
+            Write-Host "  - $warning" -ForegroundColor Yellow
         }
     }
 

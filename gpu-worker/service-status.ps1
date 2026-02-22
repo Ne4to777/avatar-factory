@@ -45,14 +45,14 @@ Write-Host ""
 # Show last 10 lines of logs
 if (Test-Path $STDOUT_LOG) {
     Write-Host "Last 10 lines of service.log:" -ForegroundColor Blue
-    Write-Host "────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "----------------------------------------------------------------" -ForegroundColor DarkGray
     try {
         Get-Content $STDOUT_LOG -Tail 10 -ErrorAction SilentlyContinue
     }
     catch {
         Write-WarningMsg "Could not read log: $_"
     }
-    Write-Host "────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "----------------------------------------------------------------" -ForegroundColor DarkGray
 }
 else {
     Write-Info "No service.log found (service may not have started yet)"
@@ -63,9 +63,9 @@ if (Test-Path $STDERR_LOG) {
     if ($errLines) {
         Write-Host ""
         Write-Host "Recent errors (service-error.log):" -ForegroundColor Yellow
-        Write-Host "────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "----------------------------------------------------------------" -ForegroundColor DarkGray
         $errLines | ForEach-Object { Write-Host $_ }
-        Write-Host "────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "----------------------------------------------------------------" -ForegroundColor DarkGray
     }
 }
 Write-Host ""

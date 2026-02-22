@@ -155,9 +155,9 @@ catch {
 
 # Step 8: Show status
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "$($Colors.Green)✓ Windows Service Installed$($Colors.Reset)"
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "===============================================================" -ForegroundColor Green
+Write-Host "$($Colors.Green)[OK] Windows Service Installed$($Colors.Reset)"
+Write-Host "===============================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Service Name: $($Colors.Cyan)$ServiceName$($Colors.Reset)"
 Write-Host "Status:       $($Colors.Green)Running$($Colors.Reset)"
