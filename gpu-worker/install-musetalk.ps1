@@ -161,9 +161,9 @@ Write-Host ""
 
 Push-Location "MuseTalk"
 try {
-    # Install huggingface-hub CLI for downloads with progress
-    Write-Host "[i] Installing HuggingFace CLI..."
-    & $venvPython -m pip install -q huggingface-hub[cli] tqdm
+    # Install huggingface-hub with tqdm for progress
+    Write-Host "[i] Installing HuggingFace tools..."
+    & $venvPython -m pip install -q huggingface-hub tqdm
     
     if ($LASTEXITCODE -ne 0) {
         Write-ColorMsg "[ERROR] Failed to install huggingface-hub" Red
@@ -173,31 +173,56 @@ try {
     Write-Host ""
     Write-Host "[i] Downloading MuseTalk models from HuggingFace..."
     Write-Host "    Repository: TMElyralab/MuseTalk"
-    Write-Host "    Size: ~2GB"
+    Write-Host "    Size: ~2GB (this may take 5-15 minutes)"
     Write-Host ""
     
-    # Use huggingface-cli download with progress bar
-    $downloadArgs = @(
-        "download",
-        "TMElyralab/MuseTalk",
-        "--local-dir", "./models",
-        "--local-dir-use-symlinks", "False"
+    # Download with progress bar using Python directly
+    # Use cmd /c to bypass PowerShell buffering and show real-time progress
+    $downloadScript = @"
+import sys
+import os
+from huggingface_hub import snapshot_download
+from tqdm import tqdm
+
+# Enable immediate stdout flush
+sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
+
+print('[i] Starting download...', flush=True)
+print('', flush=True)
+
+try:
+    snapshot_download(
+        repo_id='TMElyralab/MuseTalk',
+        local_dir='./models',
+        local_dir_use_symlinks=False,
+        resume_download=True,
+        tqdm_class=tqdm
     )
+    print('', flush=True)
+    print('[OK] Download complete!', flush=True)
+except Exception as e:
+    print('', flush=True)
+    print(f'[ERROR] Download failed: {e}', flush=True)
+    sys.exit(1)
+"@
     
-    # Add token if available
-    if ($env:HF_TOKEN) {
-        $downloadArgs += "--token", $env:HF_TOKEN
-    }
+    # Save script to temp file
+    $tempScript = [System.IO.Path]::GetTempFileName() + ".py"
+    $downloadScript | Out-File -FilePath $tempScript -Encoding UTF8
     
-    # Run download with real-time progress
-    & $venvPython -m huggingface_hub.commands.huggingface_cli @downloadArgs
+    # Run with cmd to show real-time progress
+    $env:PYTHONUNBUFFERED = "1"
+    cmd /c "$venvPython `"$tempScript`" 2>&1"
+    $exitCode = $LASTEXITCODE
     
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host ""
+    # Cleanup temp script
+    Remove-Item $tempScript -ErrorAction SilentlyContinue
+    
+    Write-Host ""
+    if ($exitCode -eq 0) {
         Write-ColorMsg "[OK] Models downloaded successfully" Green
     } else {
-        Write-Host ""
-        Write-ColorMsg "[ERROR] Model download failed (exit code: $LASTEXITCODE)" Red
+        Write-ColorMsg "[ERROR] Model download failed (exit code: $exitCode)" Red
         Write-Host ""
         Write-Host "[i] You can download manually:"
         Write-Host "    1. Visit: https://huggingface.co/TMElyralab/MuseTalk"
