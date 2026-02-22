@@ -19,6 +19,14 @@ ffmpeg-python>=0.2.0
 moviepy>=1.0.3
 gdown>=5.0.0
 
+# OpenMMLab packages (required by MuseTalk)
+# These are installed via openmim in install-musetalk.ps1:
+# - openmim (package manager for OpenMMLab)
+# - mmcv (computer vision foundation library)
+# - mmdet (object detection)
+# - mmpose (pose estimation)
+# Note: These require C++ compilation and should be installed via mim
+
 # MuseTalk custom models (install from GitHub)
 # These need to be installed separately after basic requirements
 # git+https://github.com/TMElyralab/MMCM.git@main

@@ -113,7 +113,32 @@ Write-Host ""
 Write-ColorMsg "[3/4] Installing MuseTalk custom packages..." Cyan
 Write-Host ""
 
-Write-Host "[i] Installing MMCM..."
+Write-Host "[i] Installing OpenMMLab packages (mmcv, mmdet, mmpose)..."
+Write-Host "    This may take 5-10 minutes (compiling C++ extensions)..."
+Write-Host ""
+
+# Install mmcv-full (required by mmpose and mmdet)
+& $venvPython -m pip install openmim
+& $venvPython -m mim install mmcv
+
+# Install mmdet and mmpose
+& $venvPython -m pip install mmdet mmpose
+
+if ($LASTEXITCODE -ne 0) {
+    Write-ColorMsg "[ERROR] Failed to install OpenMMLab packages" Red
+    Write-Host ""
+    Write-Host "[!] Common fixes:"
+    Write-Host "    1. Make sure Visual Studio Build Tools are installed"
+    Write-Host "    2. Restart PowerShell and try again"
+    Write-Host "    3. Check: https://mmcv.readthedocs.io/en/latest/get_started/installation.html"
+    Write-Host ""
+    exit 1
+}
+
+Write-ColorMsg "[OK] OpenMMLab packages installed" Green
+Write-Host ""
+
+Write-Host "[i] Installing MuseTalk custom packages..."
 & $venvPython -m pip install git+https://github.com/TMElyralab/MMCM.git@main --quiet
 
 Write-Host "[i] Installing controlnet_aux..."
