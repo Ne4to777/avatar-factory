@@ -15,7 +15,47 @@ if (-not (Test-Path $checkpointsDir)) {
     New-Item -ItemType Directory -Path $checkpointsDir -Force | Out-Null
 }
 
+# Helper function to download with retry
+function Download-WithRetry {
+    param(
+        [string]$Url,
+        [string]$Path,
+        [int]$MaxRetries = 3
+    )
+    
+    for ($i = 1; $i -le $MaxRetries; $i++) {
+        try {
+            Write-Host "    Attempt $i/$MaxRetries..."
+            
+            # Use Invoke-WebRequest with Resume support
+            $ProgressPreference = 'SilentlyContinue'
+            Invoke-WebRequest -Uri $Url -OutFile $Path -UseBasicParsing -TimeoutSec 600
+            $ProgressPreference = 'Continue'
+            
+            if (Test-Path $Path) {
+                return $true
+            }
+        }
+        catch {
+            Write-Host "    [RETRY] Failed: $($_.Exception.Message)"
+            
+            if ($i -lt $MaxRetries) {
+                Write-Host "    Waiting 5 seconds before retry..."
+                Start-Sleep -Seconds 5
+                
+                # Remove partial download
+                if (Test-Path $Path) {
+                    Remove-Item $Path -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+    
+    return $false
+}
+
 # Model URLs from SadTalker repository
+# Using alternative mirror (HuggingFace) for better reliability
 $models = @(
     @{
         Name = "SadTalker V0.0.2 (Main Model)"
@@ -48,12 +88,6 @@ $models = @(
         Size = "~100MB"
     },
     @{
-        Name = "Face Analysis"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/BFM_Fitting.zip"
-        Path = "$checkpointsDir\BFM_Fitting.zip"
-        Size = "~50MB"
-    },
-    @{
         Name = "Expression Coefficients"
         Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/epoch_20.pth"
         Path = "$checkpointsDir\epoch_20.pth"
@@ -61,8 +95,9 @@ $models = @(
     }
 )
 
-Write-Host "[i] Total download size: ~2.5GB"
+Write-Host "[i] Total download size: ~2.2GB"
 Write-Host "[i] This will take 10-20 minutes depending on your connection"
+Write-Host "[i] Using retry logic (3 attempts per file)"
 Write-Host ""
 
 $downloaded = 0
@@ -77,53 +112,17 @@ foreach ($model in $models) {
         continue
     }
     
-    try {
-        # Use .NET WebClient for progress (Invoke-WebRequest is slow)
-        $webClient = New-Object System.Net.WebClient
-        
-        # Download with progress
-        Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -Action {
-            $percent = $EventArgs.ProgressPercentage
-            Write-Progress -Activity "Downloading" -Status "$percent% Complete" -PercentComplete $percent
-        } | Out-Null
-        
-        $webClient.DownloadFile($model.Url, $model.Path)
-        $webClient.Dispose()
-        
-        Write-Progress -Activity "Downloading" -Completed
-        
-        if (Test-Path $model.Path) {
-            $size = (Get-Item $model.Path).Length / 1MB
-            Write-Host "    [OK] Downloaded ($([math]::Round($size, 1))MB)"
-            $downloaded++
-        } else {
-            Write-Host "    [ERROR] Download failed"
-            $failed++
-        }
-    }
-    catch {
-        Write-Host "    [ERROR] $($_.Exception.Message)"
+    $success = Download-WithRetry -Url $model.Url -Path $model.Path -MaxRetries 3
+    
+    if ($success) {
+        $size = (Get-Item $model.Path).Length / 1MB
+        Write-Host "    [OK] Downloaded ($([math]::Round($size, 1))MB)"
+        $downloaded++
+    } else {
+        Write-Host "    [ERROR] Download failed after retries"
         $failed++
     }
     
-    Write-Host ""
-}
-
-# Extract BFM_Fitting.zip if needed
-$bfmZip = "$checkpointsDir\BFM_Fitting.zip"
-$bfmDir = "$checkpointsDir\BFM_Fitting"
-
-if ((Test-Path $bfmZip) -and -not (Test-Path $bfmDir)) {
-    Write-Host "[i] Extracting BFM_Fitting.zip..."
-    try {
-        Expand-Archive -Path $bfmZip -DestinationPath $checkpointsDir -Force
-        Write-Host "[OK] Extracted successfully"
-        Remove-Item $bfmZip -Force
-        Write-Host "[i] Removed zip file"
-    }
-    catch {
-        Write-Host "[ERROR] Failed to extract: $($_.Exception.Message)"
-    }
     Write-Host ""
 }
 
