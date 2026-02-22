@@ -8,30 +8,24 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
-
-const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'localhost';
-const MINIO_PORT = process.env.MINIO_PORT || '9000';
-const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY || 'minioadmin';
-const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY || 'minioadmin123';
-const MINIO_BUCKET = process.env.MINIO_BUCKET || 'avatar-videos';
-const MINIO_USE_SSL = process.env.MINIO_USE_SSL === 'true';
-const MINIO_PUBLIC_URL = process.env.MINIO_PUBLIC_URL || `http://${MINIO_ENDPOINT}:${MINIO_PORT}`;
+import { ENV, STORAGE_CONFIG, STORAGE_PATHS } from './config';
+import { logger } from './logger';
+import { StorageError, ValidationError, type StorageUploadResult } from './types';
 
 // S3 Client configuration
 const s3Client = new S3Client({
-  endpoint: `${MINIO_USE_SSL ? 'https' : 'http'}://${MINIO_ENDPOINT}:${MINIO_PORT}`,
-  region: 'us-east-1', // MinIO требует region, но значение не важно
+  endpoint: STORAGE_CONFIG.endpoint,
+  region: STORAGE_CONFIG.region || 'us-east-1',
   credentials: {
-    accessKeyId: MINIO_ACCESS_KEY,
-    secretAccessKey: MINIO_SECRET_KEY,
+    accessKeyId: STORAGE_CONFIG.accessKeyId,
+    secretAccessKey: STORAGE_CONFIG.secretAccessKey,
   },
   forcePathStyle: true, // Важно для MinIO
 });
 
-export interface UploadResult {
-  url: string;
-  key: string;
-  bucket: string;
+export type StorageFolder = 'videos' | 'thumbnails' | 'backgrounds' | 'avatars' | 'temp';
+
+interface UploadResult extends StorageUploadResult {
   publicUrl: string;
 }
 
@@ -40,56 +34,68 @@ export interface UploadResult {
  */
 export async function uploadFile(
   filePath: string,
-  folder: 'videos' | 'thumbnails' | 'backgrounds' | 'avatars' | 'temp' = 'temp',
+  folder: StorageFolder = 'temp',
   customKey?: string
 ): Promise<UploadResult> {
+  // Validation
+  if (!filePath || filePath.trim().length === 0) {
+    throw new ValidationError('File path cannot be empty', { operation: 'upload' });
+  }
+
   try {
+    // Проверяем существование файла
+    await fs.access(filePath);
+    
     const fileBuffer = await fs.readFile(filePath);
     const ext = path.extname(filePath);
     const key = customKey || `${folder}/${nanoid()}${ext}`;
     
-    const contentType = getContentType(ext);
+    return await uploadBuffer(fileBuffer, key);
     
-    const command = new PutObjectCommand({
-      Bucket: MINIO_BUCKET,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: contentType,
-    });
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      logger.storageError('upload', error, { filePath });
+      throw new StorageError(`File not found: ${filePath}`, { operation: 'upload', filePath });
+    }
     
-    await s3Client.send(command);
-    
-    const publicUrl = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${key}`;
-    
-    console.log(`✅ Uploaded: ${publicUrl}`);
-    
-    return {
-      url: publicUrl,
-      key,
-      bucket: MINIO_BUCKET,
-      publicUrl,
-    };
-  } catch (error) {
-    console.error('Upload error:', error);
-    throw new Error(`Failed to upload file: ${error}`);
+    logger.storageError('upload', error, { filePath, folder });
+    throw error instanceof StorageError 
+      ? error 
+      : new StorageError(`Failed to upload file: ${error.message}`, { operation: 'upload', filePath });
   }
 }
 
 /**
- * Загрузка из Buffer
+ * Загрузка из Buffer (основной метод)
  */
 export async function uploadBuffer(
   buffer: Buffer,
-  filename: string,
-  folder: 'videos' | 'thumbnails' | 'backgrounds' | 'avatars' | 'temp' = 'temp'
+  keyOrFilename: string,
+  folder?: StorageFolder
 ): Promise<UploadResult> {
+  // Validation
+  if (!buffer || buffer.length === 0) {
+    throw new ValidationError('Buffer cannot be empty', { operation: 'upload' });
+  }
+
   try {
-    const ext = path.extname(filename);
-    const key = `${folder}/${nanoid()}${ext}`;
+    // Определяем key
+    const isFullKey = keyOrFilename.includes('/');
+    const key = isFullKey 
+      ? keyOrFilename 
+      : `${folder || 'temp'}/${nanoid()}${path.extname(keyOrFilename)}`;
+    
+    const ext = path.extname(key);
     const contentType = getContentType(ext);
     
+    logger.storageOperation('upload', { 
+      key, 
+      size: buffer.length,
+      contentType 
+    });
+
     const command = new PutObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
@@ -97,19 +103,22 @@ export async function uploadBuffer(
     
     await s3Client.send(command);
     
-    const publicUrl = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${key}`;
+    const publicUrl = `${ENV.S3_ENDPOINT}/${STORAGE_CONFIG.bucketName}/${key}`;
     
-    console.log(`✅ Uploaded buffer: ${publicUrl}`);
+    logger.info('File uploaded', { key, size: buffer.length });
     
     return {
       url: publicUrl,
       key,
-      bucket: MINIO_BUCKET,
+      bucket: STORAGE_CONFIG.bucketName,
       publicUrl,
     };
-  } catch (error) {
-    console.error('Upload buffer error:', error);
-    throw new Error(`Failed to upload buffer: ${error}`);
+  } catch (error: any) {
+    logger.storageError('upload', error, { size: buffer.length });
+    throw new StorageError(`Failed to upload buffer: ${error.message}`, { 
+      operation: 'upload',
+      size: buffer.length 
+    });
   }
 }
 
@@ -148,17 +157,26 @@ export async function getSignedDownloadUrl(
   key: string,
   expiresIn: number = 3600
 ): Promise<string> {
+  if (!key || key.trim().length === 0) {
+    throw new ValidationError('Key cannot be empty', { operation: 'getSignedUrl' });
+  }
+
   try {
     const command = new GetObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: key,
     });
     
+    logger.storageOperation('getSignedUrl', { key, expiresIn });
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+    
     return signedUrl;
-  } catch (error) {
-    console.error('Get signed URL error:', error);
-    throw new Error(`Failed to generate signed URL: ${error}`);
+  } catch (error: any) {
+    logger.storageError('getSignedUrl', error, { key });
+    throw new StorageError(`Failed to generate signed URL: ${error.message}`, { 
+      operation: 'getSignedUrl',
+      key 
+    });
   }
 }
 
@@ -166,17 +184,24 @@ export async function getSignedDownloadUrl(
  * Удаление файла
  */
 export async function deleteFile(key: string): Promise<void> {
+  if (!key || key.trim().length === 0) {
+    throw new ValidationError('Key cannot be empty', { operation: 'delete' });
+  }
+
   try {
     const command = new DeleteObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: key,
     });
     
     await s3Client.send(command);
-    console.log(`🗑️  Deleted: ${key}`);
-  } catch (error) {
-    console.error('Delete error:', error);
-    throw new Error(`Failed to delete file: ${error}`);
+    logger.info('File deleted', { key });
+  } catch (error: any) {
+    logger.storageError('delete', error, { key });
+    throw new StorageError(`Failed to delete file: ${error.message}`, { 
+      operation: 'delete',
+      key 
+    });
   }
 }
 
@@ -184,16 +209,33 @@ export async function deleteFile(key: string): Promise<void> {
  * Удаление по URL
  */
 export async function deleteByUrl(url: string): Promise<void> {
+  if (!url || url.trim().length === 0) {
+    throw new ValidationError('URL cannot be empty', { operation: 'deleteByUrl' });
+  }
+
   try {
-    // Извлекаем key из URL
     const urlObj = new URL(url);
     const pathParts = urlObj.pathname.split('/');
     const key = pathParts.slice(2).join('/'); // Убираем /bucket/
     
+    if (!key) {
+      throw new ValidationError('Invalid URL - cannot extract key', { 
+        operation: 'deleteByUrl',
+        url 
+      });
+    }
+    
     await deleteFile(key);
-  } catch (error) {
-    console.error('Delete by URL error:', error);
-    throw new Error(`Failed to delete file by URL: ${error}`);
+  } catch (error: any) {
+    if (error instanceof ValidationError || error instanceof StorageError) {
+      throw error;
+    }
+    
+    logger.storageError('deleteByUrl', error, { url });
+    throw new StorageError(`Failed to delete file by URL: ${error.message}`, { 
+      operation: 'deleteByUrl',
+      url 
+    });
   }
 }
 
@@ -222,9 +264,11 @@ function getContentType(ext: string): string {
  * Проверка существования файла
  */
 export async function fileExists(key: string): Promise<boolean> {
+  if (!key) return false;
+
   try {
     const command = new GetObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: key,
     });
     
@@ -239,16 +283,20 @@ export async function fileExists(key: string): Promise<boolean> {
  * Получение размера файла
  */
 export async function getFileSize(key: string): Promise<number> {
+  if (!key) {
+    throw new ValidationError('Key cannot be empty', { operation: 'getFileSize' });
+  }
+
   try {
     const command = new GetObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: key,
     });
     
     const response = await s3Client.send(command);
     return response.ContentLength || 0;
-  } catch (error) {
-    console.error('Get file size error:', error);
+  } catch (error: any) {
+    logger.warn('Failed to get file size', { key, error: error.message });
     return 0;
   }
 }
@@ -257,11 +305,19 @@ export async function getFileSize(key: string): Promise<number> {
  * Копирование файла
  */
 export async function copyFile(sourceKey: string, destKey: string): Promise<void> {
+  if (!sourceKey || !destKey) {
+    throw new ValidationError('Source and destination keys are required', { 
+      operation: 'copy',
+      sourceKey,
+      destKey 
+    });
+  }
+
   try {
-    // MinIO не поддерживает CopyObject напрямую через AWS SDK v3
-    // Поэтому скачиваем и загружаем заново
+    logger.storageOperation('copy', { sourceKey, destKey });
+
     const getCommand = new GetObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: sourceKey,
     });
     
@@ -269,20 +325,29 @@ export async function copyFile(sourceKey: string, destKey: string): Promise<void
     const body = await response.Body?.transformToByteArray();
     
     if (!body) {
-      throw new Error('Failed to read source file');
+      throw new StorageError('Failed to read source file', { 
+        operation: 'copy',
+        sourceKey 
+      });
     }
     
     const putCommand = new PutObjectCommand({
-      Bucket: MINIO_BUCKET,
+      Bucket: STORAGE_CONFIG.bucketName,
       Key: destKey,
       Body: Buffer.from(body),
       ContentType: response.ContentType,
     });
     
     await s3Client.send(putCommand);
-    console.log(`📋 Copied: ${sourceKey} → ${destKey}`);
-  } catch (error) {
-    console.error('Copy file error:', error);
-    throw new Error(`Failed to copy file: ${error}`);
+    logger.info('File copied', { sourceKey, destKey });
+  } catch (error: any) {
+    if (error instanceof StorageError) throw error;
+    
+    logger.storageError('copy', error, { sourceKey, destKey });
+    throw new StorageError(`Failed to copy file: ${error.message}`, { 
+      operation: 'copy',
+      sourceKey,
+      destKey 
+    });
   }
 }

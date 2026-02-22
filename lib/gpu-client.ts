@@ -3,50 +3,98 @@
  * Клиент для взаимодействия с GPU сервером на стационарном ПК
  */
 
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import FormData from 'form-data';
-import fs from 'fs';
+import * as fs from 'fs';
 import { Readable } from 'stream';
-
-const GPU_SERVER_URL = process.env.GPU_SERVER_URL || 'http://localhost:8001';
-const GPU_API_KEY = process.env.GPU_API_KEY || 'your-secret-gpu-key-change-this';
+import { ENV } from './config';
+import { logger } from './logger';
+import { 
+  GPUServerError, 
+  ValidationError,
+  type GPUHealthCheck,
+  type TTSRequest,
+  type LipSyncRequest,
+  type BackgroundGenerationRequest 
+} from './types';
 
 class GPUServerClient {
   private client: AxiosInstance;
+  private readonly baseURL: string;
   
-  constructor() {
+  constructor(baseURL?: string) {
+    this.baseURL = baseURL || ENV.GPU_SERVER_URL;
     this.client = axios.create({
-      baseURL: GPU_SERVER_URL,
-      timeout: 300000, // 5 минут для генерации
+      baseURL: this.baseURL,
+      timeout: ENV.GPU_TIMEOUT_MS,
       headers: {
-        'X-API-Key': GPU_API_KEY,
+        'X-API-Key': ENV.GPU_API_KEY,
       },
     });
+
+    // Request interceptor для логирования
+    this.client.interceptors.request.use(
+      (config) => {
+        logger.gpuRequest(config.url || 'unknown', {
+          method: config.method?.toUpperCase(),
+          url: config.url,
+        });
+        return config;
+      },
+      (error) => {
+        logger.gpuError('Request setup failed', error);
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor для обработки ошибок
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError) => {
+        return Promise.reject(this.handleError(error));
+      }
+    );
+  }
+
+  private handleError(error: AxiosError): GPUServerError {
+    const operation = error.config?.url || 'unknown operation';
+    
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      const message = `GPU Server unavailable at ${this.baseURL}`;
+      logger.gpuError(operation, error, { baseURL: this.baseURL });
+      return new GPUServerError(message, { operation });
+    }
+
+    if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data as any;
+      const detail = data?.detail || data?.message || 'Unknown error';
+      
+      const message = `GPU Server error (${status}): ${detail}`;
+      logger.gpuError(operation, error, { status, detail });
+      return new GPUServerError(message, { operation, status, detail });
+    }
+
+    const message = `GPU Server request failed: ${error.message}`;
+    logger.gpuError(operation, error);
+    return new GPUServerError(message, { operation });
   }
   
   /**
    * Проверка здоровья GPU сервера
    */
-  async checkHealth(): Promise<{
-    status: string;
-    gpu: {
-      name: string;
-      vram_total_gb: number;
-      vram_used_gb: number;
-      vram_free_gb: number;
-      utilization_percent: number;
-    };
-    models: {
-      sadtalker: boolean;
-      stable_diffusion: boolean;
-      silero_tts: boolean;
-    };
-  }> {
+  async checkHealth(): Promise<GPUHealthCheck> {
     try {
-      const response = await this.client.get('/health');
+      const response = await this.client.get<GPUHealthCheck>('/health');
+      logger.info('GPU Server health check', { 
+        status: response.data.status,
+        mode: response.data.mode,
+      });
       return response.data;
     } catch (error) {
-      throw new Error(`GPU Server unavailable: ${error}`);
+      throw error instanceof GPUServerError 
+        ? error 
+        : new GPUServerError('Health check failed', { operation: 'health' });
     }
   }
   
@@ -55,14 +103,33 @@ class GPUServerClient {
    */
   async textToSpeech(
     text: string,
-    speaker: string = 'xenia'
+    speaker: string = 'xenia',
+    language: string = 'ru'
   ): Promise<Buffer> {
+    // Validation
+    if (!text || text.trim().length === 0) {
+      throw new ValidationError('Text cannot be empty', { operation: 'tts' });
+    }
+
+    if (text.length > 5000) {
+      throw new ValidationError('Text too long (max 5000 chars)', { 
+        operation: 'tts',
+        length: text.length 
+      });
+    }
+
     try {
       const formData = new FormData();
-      formData.append('text', text);
-      formData.append('language', 'ru');
+      formData.append('text', text.trim());
+      formData.append('language', language);
       formData.append('speaker', speaker);
       
+      logger.info('TTS generation started', { 
+        textLength: text.length,
+        speaker,
+        language 
+      });
+
       const response = await this.client.post(
         '/api/tts',
         formData,
@@ -72,9 +139,16 @@ class GPUServerClient {
         }
       );
       
-      return Buffer.from(response.data);
-    } catch (error: any) {
-      throw new Error(`TTS generation failed: ${error.response?.data || error.message}`);
+      const buffer = Buffer.from(response.data);
+      logger.info('TTS generation completed', { 
+        audioSize: buffer.length,
+        speaker 
+      });
+
+      return buffer;
+    } catch (error) {
+      // Error уже обработан в interceptor
+      throw error;
     }
   }
   
@@ -85,23 +159,50 @@ class GPUServerClient {
     imagePath: string,
     audioPath: string
   ): Promise<Buffer> {
+    // Validation
+    if (!fs.existsSync(imagePath)) {
+      throw new ValidationError(`Image file not found: ${imagePath}`, { 
+        operation: 'lipsync',
+        imagePath 
+      });
+    }
+
+    if (!fs.existsSync(audioPath)) {
+      throw new ValidationError(`Audio file not found: ${audioPath}`, { 
+        operation: 'lipsync',
+        audioPath 
+      });
+    }
+
     try {
       const formData = new FormData();
       formData.append('image', fs.createReadStream(imagePath));
       formData.append('audio', fs.createReadStream(audioPath));
       
+      logger.info('Lip-sync generation started', { 
+        imagePath: imagePath.split('/').pop(),
+        audioPath: audioPath.split('/').pop() 
+      });
+
       const response = await this.client.post(
         '/api/lipsync',
         formData,
         {
           headers: formData.getHeaders(),
           responseType: 'arraybuffer',
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
         }
       );
       
-      return Buffer.from(response.data);
-    } catch (error: any) {
-      throw new Error(`Lip-sync generation failed: ${error.response?.data || error.message}`);
+      const buffer = Buffer.from(response.data);
+      logger.info('Lip-sync generation completed', { 
+        videoSize: buffer.length 
+      });
+
+      return buffer;
+    } catch (error) {
+      throw error;
     }
   }
   
@@ -110,15 +211,33 @@ class GPUServerClient {
    */
   async generateBackground(
     prompt: string,
+    style: string = 'professional',
     width: number = 1080,
-    height: number = 1920,
-    negativePrompt?: string
+    height: number = 1920
   ): Promise<Buffer> {
+    // Validation
+    if (!prompt || prompt.trim().length === 0) {
+      throw new ValidationError('Prompt cannot be empty', { operation: 'background' });
+    }
+
+    if (prompt.length > 1000) {
+      throw new ValidationError('Prompt too long (max 1000 chars)', { 
+        operation: 'background',
+        length: prompt.length 
+      });
+    }
+
     try {
       const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('style', 'photorealistic');
+      formData.append('prompt', prompt.trim());
+      formData.append('style', style);
       
+      logger.info('Background generation started', { 
+        promptLength: prompt.length,
+        style,
+        dimensions: `${width}x${height}` 
+      });
+
       const response = await this.client.post(
         '/api/generate-background',
         formData,
@@ -128,9 +247,14 @@ class GPUServerClient {
         }
       );
       
-      return Buffer.from(response.data);
-    } catch (error: any) {
-      throw new Error(`Background generation failed: ${error.response?.data || error.message}`);
+      const buffer = Buffer.from(response.data);
+      logger.info('Background generation completed', { 
+        imageSize: buffer.length 
+      });
+
+      return buffer;
+    } catch (error) {
+      throw error;
     }
   }
   
@@ -140,8 +264,10 @@ class GPUServerClient {
   async cleanup(): Promise<void> {
     try {
       await this.client.post('/api/cleanup');
-    } catch (error: any) {
-      console.warn(`Cleanup failed: ${error.message}`);
+      logger.info('GPU server cleanup completed');
+    } catch (error) {
+      logger.warn('GPU server cleanup failed', { error: (error as Error).message });
+      // Не бросаем ошибку - cleanup не критичен
     }
   }
 }

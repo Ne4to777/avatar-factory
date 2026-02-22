@@ -39,7 +39,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 1️⃣ ГЕНЕРАЦИЯ АУДИО (TTS)
       console.log('\n1️⃣ Generating audio...');
-      await job.updateProgress(10);
+      await job.updateProgress({ progress: 10 });
       
       const audioBuffer = await gpuClient.textToSpeech(text, getSpeakerFromVoiceId(voiceId));
       const audioPath = path.join(TEMP_DIR, `audio_${videoId}.wav`);
@@ -50,7 +50,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 2️⃣ ПОЛУЧЕНИЕ ФОТО АВАТАРА
       console.log('\n2️⃣ Getting avatar photo...');
-      await job.updateProgress(30);
+      await job.updateProgress({ progress: 30 });
       
       let avatarPhotoPath: string;
       
@@ -77,7 +77,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 3️⃣ СОЗДАНИЕ ГОВОРЯЩЕГО АВАТАРА (LIP-SYNC)
       console.log('\n3️⃣ Creating talking avatar (lip-sync)...');
-      await job.updateProgress(40);
+      await job.updateProgress({ progress: 40 });
       
       const lipSyncBuffer = await gpuClient.createLipSync(avatarPhotoPath, audioPath);
       const lipSyncVideoPath = path.join(TEMP_DIR, `lipsync_${videoId}.mp4`);
@@ -88,7 +88,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 4️⃣ ПОЛУЧЕНИЕ ИЛИ ГЕНЕРАЦИЯ ФОНА
       console.log('\n4️⃣ Getting background...');
-      await job.updateProgress(65);
+      await job.updateProgress({ progress: 65 });
       
       let backgroundPath: string;
       
@@ -103,6 +103,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
         console.log(`   Generating background: ${prompt}`);
         const backgroundBuffer = await gpuClient.generateBackground(
           prompt,
+          backgroundStyle,
           dimensions.width,
           dimensions.height
         );
@@ -116,7 +117,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 5️⃣ КОМПОЗИТИНГ ФИНАЛЬНОГО ВИДЕО
       console.log('\n5️⃣ Composing final video...');
-      await job.updateProgress(75);
+      await job.updateProgress({ progress: 75 });
       
       const finalVideoPath = await composeVideo({
         avatarVideoPath: lipSyncVideoPath,
@@ -130,14 +131,14 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 6️⃣ СОЗДАНИЕ THUMBNAIL
       console.log('\n6️⃣ Generating thumbnail...');
-      await job.updateProgress(90);
+      await job.updateProgress({ progress: 90 });
       
       const thumbnailPath = await generateThumbnail(finalVideoPath);
       console.log(`✅ Thumbnail created: ${thumbnailPath}`);
       
       // 7️⃣ ЗАГРУЗКА В ХРАНИЛИЩЕ
       console.log('\n7️⃣ Uploading to storage...');
-      await job.updateProgress(93);
+      await job.updateProgress({ progress: 93 });
       
       const [videoUpload, thumbnailUpload] = await Promise.all([
         uploadVideo(finalVideoPath),
@@ -152,7 +153,7 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       
       // 9️⃣ ОБНОВЛЕНИЕ БД
       console.log('\n9️⃣ Updating database...');
-      await job.updateProgress(97);
+      await job.updateProgress({ progress: 97 });
       
       await prisma.video.update({
         where: { id: videoId },
@@ -181,9 +182,12 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
       console.log(`   URL: ${videoUpload.publicUrl}\n`);
       
       return {
+        videoId,
         videoUrl: videoUpload.publicUrl,
         thumbnailUrl: thumbnailUpload.publicUrl,
         duration: Math.round(videoInfo.duration),
+        format,
+        quality: 'MEDIUM',
       };
       
     } catch (error: any) {

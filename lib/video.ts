@@ -7,69 +7,105 @@ import ffmpeg from 'fluent-ffmpeg';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
+import { ENV, VIDEO_CONFIG, VIDEO_DIMENSIONS } from './config';
+import { logger } from './logger';
+import { 
+  VideoProcessingError, 
+  ValidationError,
+  type VideoFormat,
+  type VideoMetadata 
+} from './types';
 
-const TEMP_DIR = process.env.TEMP_DIR || '/tmp/avatar-factory';
-
-// Размеры видео по форматам
-const VIDEO_DIMENSIONS = {
-  VERTICAL: { width: 1080, height: 1920 }, // 9:16 Reels/Shorts
-  HORIZONTAL: { width: 1920, height: 1080 }, // 16:9 YouTube
-  SQUARE: { width: 1080, height: 1080 }, // 1:1 Instagram
-};
+const TEMP_DIR = ENV.TEMP_DIR;
 
 export interface ComposeVideoOptions {
   avatarVideoPath: string;
   backgroundImagePath: string;
-  format: 'VERTICAL' | 'HORIZONTAL' | 'SQUARE';
+  format: VideoFormat;
   subtitlesText?: string;
   musicPath?: string;
   outputPath?: string;
 }
 
-export interface VideoInfo {
-  duration: number;
-  width: number;
-  height: number;
-  fps: number;
-  codec: string;
-}
+// Экспортируем VideoMetadata из types.ts
+export type { VideoMetadata as VideoInfo } from './types';
 
 /**
  * Создание директории для временных файлов
  */
-export async function ensureTempDir() {
+export async function ensureTempDir(): Promise<void> {
   try {
     await fs.mkdir(TEMP_DIR, { recursive: true });
-  } catch (error) {
-    console.error('Failed to create temp dir:', error);
+    logger.debug('Temp directory ensured', { dir: TEMP_DIR });
+  } catch (error: any) {
+    logger.error('Failed to create temp directory', error, { dir: TEMP_DIR });
+    throw new VideoProcessingError(`Failed to create temp directory: ${error.message}`, {
+      operation: 'ensureTempDir',
+      dir: TEMP_DIR
+    });
   }
 }
 
 /**
  * Получение информации о видео
  */
-export async function getVideoInfo(videoPath: string): Promise<VideoInfo> {
+export async function getVideoInfo(videoPath: string): Promise<VideoMetadata> {
+  if (!videoPath || videoPath.trim().length === 0) {
+    throw new ValidationError('Video path cannot be empty', { operation: 'getVideoInfo' });
+  }
+
+  try {
+    // Проверяем существование файла
+    await fs.access(videoPath);
+  } catch {
+    throw new ValidationError(`Video file not found: ${videoPath}`, { 
+      operation: 'getVideoInfo',
+      videoPath 
+    });
+  }
+
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
-        reject(err);
+        logger.error('FFprobe failed', err, { videoPath });
+        reject(new VideoProcessingError(`Failed to probe video: ${err.message}`, {
+          operation: 'getVideoInfo',
+          videoPath
+        }));
         return;
       }
       
       const videoStream = metadata.streams.find(s => s.codec_type === 'video');
       
       if (!videoStream) {
-        reject(new Error('No video stream found'));
+        logger.error('No video stream found', undefined, { videoPath });
+        reject(new VideoProcessingError('No video stream found in file', {
+          operation: 'getVideoInfo',
+          videoPath
+        }));
         return;
       }
       
-      resolve({
+      // Безопасный парсинг FPS
+      let fps = VIDEO_CONFIG.DEFAULT_FPS;
+      if (videoStream.r_frame_rate) {
+        const [num, den] = videoStream.r_frame_rate.split('/').map(Number);
+        if (num && den) {
+          fps = Math.round(num / den);
+        }
+      }
+
+      const info: VideoMetadata = {
         duration: metadata.format.duration || 0,
         width: videoStream.width || 0,
         height: videoStream.height || 0,
-        fps: eval(videoStream.r_frame_rate || '30/1'),
+        fps,
         codec: videoStream.codec_name || 'unknown',
-      });
+        bitrate: metadata.format.bit_rate,
+      };
+
+      logger.debug('Video info retrieved', { ...info, videoPath: videoPath.split('/').pop() });
+      resolve(info);
     });
   });
 }
@@ -86,6 +122,40 @@ export async function composeVideo(options: ComposeVideoOptions): Promise<string
     musicPath,
     outputPath,
   } = options;
+
+  // Validation
+  if (!avatarVideoPath || !backgroundImagePath) {
+    throw new ValidationError('Avatar video and background image are required', {
+      operation: 'composeVideo',
+      avatarVideoPath,
+      backgroundImagePath
+    });
+  }
+
+  if (!VIDEO_DIMENSIONS[format]) {
+    throw new ValidationError(`Invalid video format: ${format}`, {
+      operation: 'composeVideo',
+      format
+    });
+  }
+
+  // Проверяем существование файлов
+  try {
+    await fs.access(avatarVideoPath);
+    await fs.access(backgroundImagePath);
+    if (musicPath) {
+      await fs.access(musicPath);
+    }
+  } catch (error: any) {
+    logger.error('Input file not found', error, { 
+      avatarVideoPath,
+      backgroundImagePath,
+      musicPath 
+    });
+    throw new ValidationError(`Input file not found: ${error.message}`, {
+      operation: 'composeVideo'
+    });
+  }
   
   await ensureTempDir();
   
@@ -94,6 +164,14 @@ export async function composeVideo(options: ComposeVideoOptions): Promise<string
     TEMP_DIR,
     `final_${nanoid()}.mp4`
   );
+
+  logger.info('Starting video composition', {
+    format,
+    dimensions,
+    hasSubtitles: !!subtitlesText,
+    hasMusic: !!musicPath,
+    outputPath: finalOutputPath
+  });
   
   return new Promise((resolve, reject) => {
     let command = ffmpeg();
@@ -165,18 +243,36 @@ export async function composeVideo(options: ComposeVideoOptions): Promise<string
       .outputOptions(outputOptions)
       .output(finalOutputPath)
       .on('start', (commandLine) => {
-        console.log('🎬 FFmpeg started:', commandLine);
+        logger.debug('FFmpeg process started', { 
+          command: commandLine.substring(0, 200),
+          format,
+          outputPath: finalOutputPath
+        });
       })
       .on('progress', (progress) => {
-        console.log(`⏳ Processing: ${progress.percent?.toFixed(1) || 0}%`);
+        const percent = progress.percent?.toFixed(1) || '0';
+        logger.debug(`Video composition progress: ${percent}%`, { 
+          percent,
+          timemark: progress.timemark 
+        });
       })
       .on('end', () => {
-        console.log(`✅ Video composed: ${finalOutputPath}`);
+        logger.info('Video composition completed', { 
+          outputPath: finalOutputPath,
+          format 
+        });
         resolve(finalOutputPath);
       })
       .on('error', (err) => {
-        console.error('❌ FFmpeg error:', err);
-        reject(err);
+        logger.error('FFmpeg composition failed', err, { 
+          outputPath: finalOutputPath,
+          format 
+        });
+        reject(new VideoProcessingError(`Video composition failed: ${err.message}`, {
+          operation: 'composeVideo',
+          format,
+          outputPath: finalOutputPath
+        }));
       })
       .run();
   });
@@ -192,26 +288,47 @@ export async function generateThumbnail(
 ): Promise<string> {
   await ensureTempDir();
   
+  if (!videoPath || videoPath.trim().length === 0) {
+    throw new ValidationError('Video path cannot be empty', { operation: 'generateThumbnail' });
+  }
+
+  try {
+    await fs.access(videoPath);
+  } catch {
+    throw new ValidationError(`Video file not found: ${videoPath}`, { 
+      operation: 'generateThumbnail',
+      videoPath 
+    });
+  }
+
   const thumbnailPath = outputPath || path.join(
     TEMP_DIR,
     `thumb_${nanoid()}.png`
   );
   
+  logger.info('Generating thumbnail', { 
+    videoPath: videoPath.split('/').pop(),
+    timePosition 
+  });
+
   return new Promise((resolve, reject) => {
-    // Простая генерация первого кадра как PNG
     ffmpeg(videoPath)
       .outputOptions([
         '-vframes', '1',
-        '-update', '1'
+        '-update', '1',
+        '-ss', timePosition
       ])
       .output(thumbnailPath)
       .on('end', () => {
-        console.log(`✅ Thumbnail created: ${thumbnailPath}`);
+        logger.info('Thumbnail created', { thumbnailPath });
         resolve(thumbnailPath);
       })
       .on('error', (err) => {
-        console.error('❌ Thumbnail error:', err);
-        reject(err);
+        logger.error('Thumbnail generation failed', err, { videoPath });
+        reject(new VideoProcessingError(`Failed to generate thumbnail: ${err.message}`, {
+          operation: 'generateThumbnail',
+          videoPath
+        }));
       })
       .run();
   });
