@@ -542,38 +542,20 @@ $step7_5 = Invoke-Step "xformers Installation" {
     }
     
     Write-Info "Attempting xformers installation (may take several minutes)..."
+    Write-Info "If it hangs >10 minutes, press Ctrl+C to skip"
     Write-Host ""
     
-    # Run with job to enable timeout
-    $job = Start-Job -ScriptBlock {
-        param($pythonPath, $args)
-        & $pythonPath @args
-        return $LASTEXITCODE
-    } -ArgumentList $venvPython, $xformersArgs
+    # Run installation directly (no job to avoid context issues)
+    & $venvPython @xformersArgs
+    $exitCode = $LASTEXITCODE
     
-    # Wait up to 10 minutes (600 seconds)
-    $timeout = 600
-    $completed = Wait-Job $job -Timeout $timeout
-    
-    if ($completed) {
-        $exitCode = Receive-Job $job
-        Remove-Job $job
-        
-        if ($exitCode -eq 0) {
-            $installedVersion = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
-            Write-Success "xformers installed: $installedVersion"
-        }
-        else {
-            Write-WarningMsg "xformers installation failed (this is optional)"
-            Write-Info "Diffusers will work without xformers, but slower"
-        }
+    if ($exitCode -eq 0) {
+        $installedVersion = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
+        Write-Success "xformers installed: $installedVersion"
     }
     else {
-        # Timeout - kill the job
-        Stop-Job $job
-        Remove-Job $job
-        Write-WarningMsg "xformers installation timed out after $timeout seconds"
-        Write-Info "Skipping xformers - Diffusers will work without it (slower)"
+        Write-WarningMsg "xformers installation failed (this is optional)"
+        Write-Info "Diffusers will work without xformers, but slower"
     }
 }
 # xformers is optional, don't fail if it doesn't install
@@ -647,6 +629,17 @@ $step8 = Invoke-Step "SadTalker Setup" {
         else {
             Write-Info "Installing SadTalker dependencies..."
             
+            # First, upgrade setuptools to fix Python 3.12 compatibility
+            Write-Info "Upgrading setuptools for Python 3.12 compatibility..."
+            $setuptoolsArgs = @("-m", "pip", "install", "--upgrade", "setuptools>=65.0", "wheel")
+            if ($Silent) { $setuptoolsArgs += "--quiet" }
+            & $venvPythonPath @setuptoolsArgs
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-WarningMsg "setuptools upgrade failed, continuing anyway..."
+            }
+            
+            # Now install SadTalker requirements
             $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
             if ($Silent) { $sadPipArgs += "--quiet" }
             else {
