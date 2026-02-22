@@ -182,21 +182,22 @@ try {
 import sys
 import os
 from huggingface_hub import snapshot_download
-from tqdm import tqdm
 
 # Enable immediate stdout flush
-sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(line_buffering=True)
 
 print('[i] Starting download...', flush=True)
+print('[i] Progress will be shown by huggingface_hub', flush=True)
 print('', flush=True)
 
 try:
+    # snapshot_download shows progress automatically when tqdm is installed
     snapshot_download(
         repo_id='TMElyralab/MuseTalk',
         local_dir='./models',
         local_dir_use_symlinks=False,
-        resume_download=True,
-        tqdm_class=tqdm
+        resume_download=True
     )
     print('', flush=True)
     print('[OK] Download complete!', flush=True)
