@@ -399,19 +399,21 @@ $step6 = Invoke-Step "PyTorch Installation" {
         $pipArgs += "--quiet"
     }
     
-    # Execute pip with unbuffered output
-    Write-Host "  Downloading and installing (progress will appear below)..."
+    # Execute pip with unbuffered output - use direct call with & for real-time output
+    Write-Host "  Downloading and installing..."
+    Write-Host "  (This may take a few minutes. Progress bars will appear below)"
     Write-Host ""
     
-    # Use python -u for unbuffered output, call pip directly
-    $pipCmd = "-u -m pip install torch==$PYTORCH_VERSION+cu118 torchvision==$TORCHVISION_VERSION+cu118 torchaudio==$TORCHAUDIO_VERSION+cu118 --index-url https://download.pytorch.org/whl/cu118"
-    if (-not $Silent) { $pipCmd += " --progress-bar on" }
-    
-    # Call directly without any wrapping
-    Start-Process -FilePath $venvPython -ArgumentList $pipCmd -NoNewWindow -Wait
+    # Use & for direct execution with real-time output
+    & $venvPython -u -m pip install `
+        torch==$PYTORCH_VERSION+cu118 `
+        torchvision==$TORCHVISION_VERSION+cu118 `
+        torchaudio==$TORCHAUDIO_VERSION+cu118 `
+        --index-url https://download.pytorch.org/whl/cu118 `
+        --no-cache-dir $(if (-not $Silent) { "--progress-bar on" })
     
     if ($LASTEXITCODE -ne 0) {
-        throw "PyTorch installation failed. Check output above for details."
+        throw "PyTorch installation failed."
     }
     
     Write-Host ""
@@ -480,21 +482,20 @@ $step7 = Invoke-Step "Python Dependencies" {
             Write-Host ""
         }
 
-        Write-Host "  Installing dependencies..."
+        Write-Host "  Installing dependencies (progress will appear below)..."
         Write-Host ""
         
-        # Build command line
-        $cmdLine = "-m pip install -r requirements.txt"
-        if ($Silent) { $cmdLine += " --quiet" } else { $cmdLine += " -v" }
+        # Use unbuffered python
+        $pipCmd = "-u -m pip install -r requirements.txt"
+        if (-not $Silent) { $pipCmd += " --progress-bar on" }
         
-        # Run with cmd to avoid PowerShell buffering
-        cmd /c "$venvPython $cmdLine 2>&1"
-        $exitCode = $LASTEXITCODE
-
-        Write-Host ""
-        if ($exitCode -ne 0) {
+        Start-Process -FilePath $venvPython -ArgumentList $pipCmd -NoNewWindow -Wait
+        
+        if ($LASTEXITCODE -ne 0) {
             throw "Dependencies installation failed. Check output above for details."
         }
+        
+        Write-Host ""
 
         Write-Success "Python dependencies installed"
     }
