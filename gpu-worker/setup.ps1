@@ -23,12 +23,12 @@ $null = Set-Location $PSScriptRoot
 $LOG_FILE = Join-Path $PSScriptRoot "logs\install.log"
 
 $VENV_PATH = "venv"
-$PYTHON_VERSION_MIN = "3.10"
-$PYTHON_VERSION_MAX = "3.11"  # Python 3.12 has compatibility issues with AI libraries
+$PYTHON_VERSION_MIN = "3.11"
+$PYTHON_VERSION_MAX = "3.11"  # Python 3.11 recommended for best performance and stability
 $CUDA_VERSION_RECOMMENDED = "11.8"
-$PYTORCH_VERSION = "2.1.2"  # Stable LTS version
-$TORCHVISION_VERSION = "0.16.2"  # Compatible with PyTorch 2.1.2
-$TORCHAUDIO_VERSION = "2.1.2"
+$PYTORCH_VERSION = "2.7.0"  # Latest stable LTS version (Feb 2026)
+$TORCHVISION_VERSION = "0.19.0"  # Compatible with PyTorch 2.7.0
+$TORCHAUDIO_VERSION = "2.7.0"
 
 # Initialize logging
 $logDir = Split-Path $LOG_FILE -Parent
@@ -157,21 +157,21 @@ $step2 = Invoke-Step "Python Installation" {
                 $script:InstallationState.PythonReady = $true
                 return
             }
-            elseif ($major -eq 3 -and $minor -eq 12) {
+            elseif ($major -eq 3 -and $minor -lt 11) {
                 Write-Host ""
-                Write-ErrorMsg "Python 3.12 detected - NOT COMPATIBLE!"
+                Write-ErrorMsg "Python $major.$minor detected - TOO OLD!"
                 Write-Host ""
-                Write-Host "  $($Colors.Yellow)Python 3.12 has breaking changes that prevent AI libraries from working.$($Colors.Reset)"
+                Write-Host "  $($Colors.Yellow)Python 3.11+ is required for Avatar Factory GPU Worker$($Colors.Reset)"
                 Write-Host ""
-                Write-Host "  Please install Python 3.10 (recommended):"
-                Write-Host "  $($Colors.Cyan)https://www.python.org/downloads/release/python-31011/$($Colors.Reset)"
+                Write-Host "  Please install Python 3.11 (recommended):"
+                Write-Host "  $($Colors.Cyan)https://www.python.org/downloads/$($Colors.Reset)"
                 Write-Host ""
                 Write-Host "  After installation:"
                 Write-Host "  1. Close this window"
                 Write-Host "  2. Delete venv folder: $($Colors.Yellow)rmdir /s /q venv$($Colors.Reset)"
                 Write-Host "  3. Run install.bat again"
                 Write-Host ""
-                throw "Python 3.12 is not compatible. Please install Python 3.10."
+                throw "Python 3.11+ is required. Current version: $major.$minor"
             }
         }
     }
@@ -380,8 +380,9 @@ $step6 = Invoke-Step "PyTorch Installation" {
     }
     
     # Install PyTorch with specific stable versions to ensure compatibility
-    # Using PyTorch 2.1.2 (LTS) - tested and stable with AI libraries
+    # Using PyTorch 2.7.0 (LTS) - latest stable with built-in SDPA optimization
     Write-Info "Installing PyTorch $PYTORCH_VERSION with CUDA 11.8..."
+    Write-Info "Note: PyTorch 2.7 includes Scaled Dot Product Attention - no xformers needed!"
     
     $pipArgs = @(
         "-m", "pip",
