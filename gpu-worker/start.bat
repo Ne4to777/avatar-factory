@@ -83,13 +83,16 @@ if not exist ".env" (
 )
 
 REM Get IP for display
-for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4 Address"') do (
-    set IP_ADDR=%%a
-    set IP_ADDR=!IP_ADDR:~1!
-    goto :ip_found
+set IP_ADDR=localhost
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /C:"IPv4"') do (
+    set TEMP_IP=%%a
+    set TEMP_IP=!TEMP_IP: =!
+    if not "!TEMP_IP!"=="" (
+        set IP_ADDR=!TEMP_IP!
+        goto :ip_found
+    )
 )
 :ip_found
-if "!IP_ADDR!"=="" set IP_ADDR=localhost
 
 echo %GREEN%Virtual environment activated%NC%
 echo %GREEN%Configuration loaded%NC%
