@@ -495,7 +495,16 @@ $step7_5 = Invoke-Step "xformers Installation" {
     $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
     
     # Check if xformers is already installed
-    $xformersInstalled = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
+    $xformersInstalled = $null
+    try {
+        $xformersInstalled = & $venvPython -c "import xformers; print(xformers.__version__)" 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            $xformersInstalled = $null
+        }
+    }
+    catch {
+        $xformersInstalled = $null
+    }
     
     if ($xformersInstalled -and -not $Force) {
         Write-Success "xformers already installed: $xformersInstalled"
@@ -589,7 +598,16 @@ $step8 = Invoke-Step "SadTalker Setup" {
         }
         
         # Check if key SadTalker package (kornia) is installed
-        $korniaInstalled = & $venvPythonPath -c "import kornia" 2>$null
+        $korniaInstalled = $false
+        try {
+            $null = & $venvPythonPath -c "import kornia" 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $korniaInstalled = $true
+            }
+        }
+        catch {
+            $korniaInstalled = $false
+        }
         
         if ($korniaInstalled -and -not $Force) {
             Write-Success "SadTalker dependencies already installed"
