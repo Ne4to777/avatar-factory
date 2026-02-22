@@ -55,13 +55,16 @@ if ($serverRunning) {
 Write-ColorMsg "[OK] Server is not running" Green
 Write-Host ""
 
-# Check venv
-$venvPython = "venv\Scripts\python.exe"
-if (-not (Test-Path $venvPython)) {
+# Check venv and get full path
+$venvPython = Resolve-Path "venv\Scripts\python.exe" -ErrorAction SilentlyContinue
+if (-not $venvPython) {
     Write-ColorMsg "[ERROR] Virtual environment not found" Red
     Write-Host "  Run install.bat first"
     exit 1
 }
+
+Write-Host "[i] Using Python: $venvPython"
+Write-Host ""
 
 # Step 1: Clone MuseTalk repository
 Write-ColorMsg "[1/4] Cloning MuseTalk repository..." Cyan
