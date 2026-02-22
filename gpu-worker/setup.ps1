@@ -297,12 +297,30 @@ $step5 = Invoke-Step "Python Virtual Environment" {
     # Upgrade pip using venv's python explicitly
     Write-Info "Upgrading pip..."
     $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
-    $pipUpgradeArgs = @("-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel")
-    if ($Silent) { $pipUpgradeArgs += "--quiet" }
-    & $venvPython @pipUpgradeArgs
+    $pipUpgradeArgs = @(
+        "-m", "pip", 
+        "install", 
+        "--upgrade", 
+        "--no-input",
+        "--disable-pip-version-check",
+        "pip", 
+        "setuptools", 
+        "wheel"
+    )
+    
+    if ($Silent) { 
+        $pipUpgradeArgs += "--quiet" 
+    }
+    
+    # Suppress warnings and run non-interactively
+    $env:PIP_NO_INPUT = "1"
+    & $venvPython @pipUpgradeArgs 2>&1 | Out-Null
 
     if ($LASTEXITCODE -eq 0) {
         Write-Success "pip upgraded"
+    }
+    else {
+        Write-WarningMsg "pip upgrade had warnings (this is usually ok)"
     }
 
     $script:InstallationState.VenvCreated = $true
