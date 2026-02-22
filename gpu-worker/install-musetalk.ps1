@@ -161,30 +161,48 @@ Write-Host ""
 
 Push-Location "MuseTalk"
 try {
-    # Download using git lfs or huggingface-cli
-    Write-Host "[i] Installing git-lfs if needed..."
-    & $venvPython -m pip install huggingface-hub[cli] --quiet
+    # Install huggingface-hub CLI for downloads with progress
+    Write-Host "[i] Installing HuggingFace CLI..."
+    & $venvPython -m pip install -q huggingface-hub[cli] tqdm
     
-    Write-Host "[i] Downloading models..."
-    & $venvPython -c @"
-from huggingface_hub import snapshot_download
-import os
-
-print('[i] Downloading MuseTalk models from HuggingFace...')
-snapshot_download(
-    repo_id='TMElyralab/MuseTalk',
-    local_dir='./models',
-    local_dir_use_symlinks=False
-)
-print('[OK] Models downloaded')
-"@
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorMsg "[ERROR] Failed to install huggingface-hub" Red
+        exit 1
+    }
+    
+    Write-Host ""
+    Write-Host "[i] Downloading MuseTalk models from HuggingFace..."
+    Write-Host "    Repository: TMElyralab/MuseTalk"
+    Write-Host "    Size: ~2GB"
+    Write-Host ""
+    
+    # Use huggingface-cli download with progress bar
+    $downloadArgs = @(
+        "download",
+        "TMElyralab/MuseTalk",
+        "--local-dir", "./models",
+        "--local-dir-use-symlinks", "False"
+    )
+    
+    # Add token if available
+    if ($env:HF_TOKEN) {
+        $downloadArgs += "--token", $env:HF_TOKEN
+    }
+    
+    # Run download with real-time progress
+    & $venvPython -m huggingface_hub.commands.huggingface_cli @downloadArgs
     
     if ($LASTEXITCODE -eq 0) {
+        Write-Host ""
         Write-ColorMsg "[OK] Models downloaded successfully" Green
     } else {
-        Write-ColorMsg "[ERROR] Model download failed" Red
-        Write-Host "[i] You can download manually from:"
-        Write-Host "    https://huggingface.co/TMElyralab/MuseTalk"
+        Write-Host ""
+        Write-ColorMsg "[ERROR] Model download failed (exit code: $LASTEXITCODE)" Red
+        Write-Host ""
+        Write-Host "[i] You can download manually:"
+        Write-Host "    1. Visit: https://huggingface.co/TMElyralab/MuseTalk"
+        Write-Host "    2. Download all files to: MuseTalk\models\"
+        Write-Host ""
     }
 }
 finally {
