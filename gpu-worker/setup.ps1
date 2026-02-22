@@ -399,18 +399,18 @@ $step6 = Invoke-Step "PyTorch Installation" {
         $pipArgs += "--quiet"
     }
     
-    # Execute pip with unbuffered output - use direct call with & for real-time output
+    # Execute pip with real-time progress using cmd.exe (bypasses PowerShell buffering)
     Write-Host "  Downloading and installing..."
-    Write-Host "  (This may take a few minutes. Progress bars will appear below)"
+    Write-Host "  (This may take a few minutes. Progress will update automatically)"
     Write-Host ""
     
-    # Use & for direct execution with real-time output
-    & $venvPython -u -m pip install `
-        torch==$PYTORCH_VERSION+cu118 `
-        torchvision==$TORCHVISION_VERSION+cu118 `
-        torchaudio==$TORCHAUDIO_VERSION+cu118 `
-        --index-url https://download.pytorch.org/whl/cu118 `
-        --no-cache-dir $(if (-not $Silent) { "--progress-bar on" })
+    # Force unbuffered output and use cmd.exe for proper terminal handling
+    $env:PYTHONUNBUFFERED = "1"
+    $pipCmd = "pip install torch==$PYTORCH_VERSION+cu118 torchvision==$TORCHVISION_VERSION+cu118 torchaudio==$TORCHAUDIO_VERSION+cu118 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir"
+    if (-not $Silent) { $pipCmd += " --progress-bar on" }
+    
+    # Use cmd /c for real-time output without buffering
+    cmd /c "`"$venvPython`" -u -m $pipCmd"
     
     if ($LASTEXITCODE -ne 0) {
         throw "PyTorch installation failed."
@@ -482,17 +482,19 @@ $step7 = Invoke-Step "Python Dependencies" {
             Write-Host ""
         }
 
-        Write-Host "  Installing dependencies (progress will appear below)..."
+        Write-Host "  Installing dependencies..."
+        Write-Host "  (Progress will update automatically)"
         Write-Host ""
         
-        # Use unbuffered python
-        $pipCmd = "-u -m pip install -r requirements.txt"
+        # Use cmd.exe for real-time progress updates
+        $env:PYTHONUNBUFFERED = "1"
+        $pipCmd = "pip install -r requirements.txt --no-cache-dir"
         if (-not $Silent) { $pipCmd += " --progress-bar on" }
         
-        Start-Process -FilePath $venvPython -ArgumentList $pipCmd -NoNewWindow -Wait
+        cmd /c "`"$venvPython`" -u -m $pipCmd"
         
         if ($LASTEXITCODE -ne 0) {
-            throw "Dependencies installation failed. Check output above for details."
+            throw "Dependencies installation failed."
         }
         
         Write-Host ""
