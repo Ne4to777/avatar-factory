@@ -433,21 +433,23 @@ $step8 = Invoke-Step "SadTalker Setup" {
     Write-Info "Installing SadTalker dependencies..."
 
     Push-Location "SadTalker"
+    try {
+        if (Test-Path "requirements.txt") {
+            $sadPipArgs = @("install", "-r", "requirements.txt")
+            if ($Silent) { $sadPipArgs += "--quiet" }
+            python -m pip @sadPipArgs
 
-    if (Test-Path "requirements.txt") {
-        $sadPipArgs = @("install", "-r", "requirements.txt")
-        if ($Silent) { $sadPipArgs += "--quiet" }
-        python -m pip @sadPipArgs
-
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "SadTalker dependencies installed"
-        }
-        else {
-            Write-WarningMsg "Some SadTalker dependencies failed to install"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "SadTalker dependencies installed"
+            }
+            else {
+                Write-WarningMsg "Some SadTalker dependencies failed to install"
+            }
         }
     }
-
-    Pop-Location
+    finally {
+        Pop-Location
+    }
 }
 if (-not $step8) { exit 1 }
 
