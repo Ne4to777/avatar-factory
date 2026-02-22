@@ -66,25 +66,22 @@ if exist "venv" (
 )
 
 REM Remove obsolete files from previous installations
+echo [i] Cleaning obsolete files...
+
+REM Remove legacy lip-sync module directory
 if exist "SadTalker" (
-    echo [i] Removing obsolete lip-sync module...
-    rmdir /s /q SadTalker
-    echo [OK] Cleaned up
-    echo.
+    rmdir /s /q "SadTalker" 2>nul
 )
 
-if exist "sadtalker_inference.py" (
-    echo [i] Removing obsolete files...
-    del sadtalker_inference.py
+REM Remove legacy inference wrappers and scripts
+for %%F in (*talker*.py *talker*.ps1 *talker*.txt *-py312.ps1) do (
+    if exist "%%F" (
+        del /q "%%F" 2>nul
+    )
 )
 
-if exist "sadtalker-requirements-compat.txt" (
-    del sadtalker-requirements-compat.txt
-)
-
-if exist "download-sadtalker-models.ps1" (
-    del download-sadtalker-models.ps1
-)
+echo [OK] Cleanup complete
+echo.
 
 REM Create new venv with Python 3.11
 echo [i] Creating new virtual environment with Python 3.11...

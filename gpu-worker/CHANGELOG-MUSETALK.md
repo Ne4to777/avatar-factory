@@ -115,12 +115,10 @@
 - `README.md` - полное обновление документации
 
 ### Удалённые файлы (obsolete)
-- `download-sadtalker-models.ps1`
-- `sadtalker-requirements-compat.txt`
-- `sadtalker_inference.py`
-- `fix-sadtalker-py312.ps1`
-- `reinstall-with-py310.bat`
-- `check-service.bat`
+- Legacy lip-sync module files and dependencies
+- Old model download scripts
+- Obsolete Python 3.10/3.12 compatibility scripts
+- Diagnostic utilities (superseded by test-components.bat)
 
 ---
 
