@@ -463,11 +463,11 @@ $step7_5 = Invoke-Step "xformers Installation" {
 
     $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
     
-    # Try to install prebuilt wheel first (much faster)
+    # Try to install xformers (flexible version for compatibility)
     $xformersArgs = @(
         "-m", "pip",
         "install",
-        "xformers==0.0.23.post1",
+        "xformers",
         "--index-url",
         "https://download.pytorch.org/whl/cu118"
     )
@@ -486,7 +486,8 @@ $step7_5 = Invoke-Step "xformers Installation" {
     }
     
     if ($exitCode -eq 0) {
-        Write-Success "xformers installed successfully"
+        $installedVersion = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
+        Write-Success "xformers installed: $installedVersion"
     }
     else {
         Write-WarningMsg "xformers installation failed (this is optional)"
@@ -542,17 +543,18 @@ $step8 = Invoke-Step "SadTalker Setup" {
 
     # Install/Update SadTalker dependencies (always run, even if already cloned)
     Write-Info "Installing SadTalker dependencies..."
+    
+    # Get full path to venv python before changing directory
+    $venvPythonPath = Resolve-Path (Join-Path $VENV_PATH "Scripts\python.exe")
 
     Push-Location "SadTalker"
     try {
         if (Test-Path "requirements.txt") {
-            $venvPython = Join-Path (Resolve-Path "..") $VENV_PATH "Scripts\python.exe"
-            
             # Capture output for better error reporting
             $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
             if ($Silent) { $sadPipArgs += "--quiet" }
             
-            $output = & $venvPython @sadPipArgs 2>&1
+            $output = & $venvPythonPath @sadPipArgs 2>&1
             $exitCode = $LASTEXITCODE
             
             if (-not $Silent) {
