@@ -127,17 +127,53 @@ Write-ColorMsg "[OK] OpenMMLab packages installed" Green
 Write-Host ""
 
 Write-Host "[i] Installing MuseTalk custom packages..."
+Write-Host ""
+
+Write-Host "[i] Installing MMCM..."
 & $venvPython -m pip install git+https://github.com/TMElyralab/MMCM.git@main --quiet
+if ($LASTEXITCODE -eq 0) {
+    Write-ColorMsg "    [OK] MMCM installed" Green
+} else {
+    Write-ColorMsg "    [WARN] MMCM failed, continuing..." Yellow
+}
 
 Write-Host "[i] Installing controlnet_aux..."
 & $venvPython -m pip install git+https://github.com/TMElyralab/controlnet_aux.git@tme --quiet
+if ($LASTEXITCODE -eq 0) {
+    Write-ColorMsg "    [OK] controlnet_aux installed" Green
+} else {
+    Write-ColorMsg "    [WARN] controlnet_aux failed, continuing..." Yellow
+}
 
 Write-Host "[i] Installing IP-Adapter..."
 & $venvPython -m pip install git+https://github.com/tencent-ailab/IP-Adapter.git@main --quiet
+if ($LASTEXITCODE -eq 0) {
+    Write-ColorMsg "    [OK] IP-Adapter installed" Green
+} else {
+    Write-ColorMsg "    [WARN] IP-Adapter failed, continuing..." Yellow
+}
 
-Write-Host "[i] Installing CLIP..."
-& $venvPython -m pip install git+https://github.com/openai/CLIP.git@main --quiet
+Write-Host "[i] Installing CLIP (may download models via torch.hub)..."
+Write-Host "    Note: This may take 1-2 minutes on first install"
+$clipInstall = Start-Job -ScriptBlock {
+    param($python)
+    & $python -m pip install git+https://github.com/openai/CLIP.git@main --quiet 2>&1
+} -ArgumentList $venvPython
 
+# Wait for CLIP installation with 3-minute timeout
+$clipResult = Wait-Job $clipInstall -Timeout 180
+if ($clipResult) {
+    $clipOutput = Receive-Job $clipInstall
+    Remove-Job $clipInstall
+    Write-ColorMsg "    [OK] CLIP installed" Green
+} else {
+    Stop-Job $clipInstall
+    Remove-Job $clipInstall
+    Write-ColorMsg "    [WARN] CLIP installation timed out (3 min), skipping..." Yellow
+    Write-Host "    MuseTalk should still work without CLIP"
+}
+
+Write-Host ""
 Write-ColorMsg "[OK] Custom packages installed" Green
 Write-Host ""
 
