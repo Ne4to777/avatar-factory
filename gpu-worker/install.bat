@@ -44,7 +44,7 @@ if not exist "%~dp0setup.ps1" (
 
 echo %GREEN%Running setup...%NC%
 echo.
-powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0setup.ps1"
+powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0setup.ps1" %*
 set SETUP_EXIT=%errorLevel%
 
 echo.

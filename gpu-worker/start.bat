@@ -59,6 +59,14 @@ if not exist "venv" (
     exit /b 1
 )
 
+REM Check if server.py exists
+if not exist "server.py" (
+    echo %RED%Error: server.py not found%NC%
+    echo %YELLOW%  Make sure you're in the gpu-worker directory%NC%
+    pause
+    exit /b 1
+)
+
 REM Activate venv
 call venv\Scripts\activate.bat
 
@@ -66,9 +74,12 @@ REM Check/create .env
 if not exist ".env" (
     echo %YELLOW%.env not found, creating defaults...%NC%
     set "API_KEY=%RANDOM%%RANDOM%%RANDOM%%RANDOM%"
-    echo GPU_API_KEY=!API_KEY! > .env
-    echo HOST=0.0.0.0 >> .env
-    echo PORT=8001 >> .env
+    (
+        echo GPU_API_KEY=!API_KEY!
+        echo HOST=0.0.0.0
+        echo PORT=8001
+    ) > .env
+    echo %GREEN%Created .env with random API key%NC%
 )
 
 REM Get IP for display
@@ -94,11 +105,14 @@ echo.
 
 REM Start server
 python server.py
+set SERVER_EXIT=!errorLevel!
 
-if %errorLevel% neq 0 (
+REM Server stopped
+if !SERVER_EXIT! neq 0 (
     echo.
     echo %RED%Server exited with error%NC%
 )
 
 echo.
 pause
+exit /b !SERVER_EXIT!
