@@ -24,6 +24,9 @@ $VENV_PATH = "venv"
 $PYTHON_VERSION_MIN = "3.10"
 $PYTHON_VERSION_MAX = "3.11"  # Python 3.12 has compatibility issues with AI libraries
 $CUDA_VERSION_RECOMMENDED = "11.8"
+$PYTORCH_VERSION = "2.1.2"  # Stable LTS version
+$TORCHVISION_VERSION = "0.16.2"  # Compatible with PyTorch 2.1.2
+$TORCHAUDIO_VERSION = "2.1.2"
 
 # Initialize logging
 $logDir = Split-Path $LOG_FILE -Parent
@@ -381,14 +384,14 @@ $step6 = Invoke-Step "PyTorch Installation" {
         Write-Host ""
     }
     
-    # Install PyTorch with matching versions to avoid dependency conflicts
+    # Install PyTorch with specific stable versions to ensure compatibility
+    # Using PyTorch 2.1.2 (LTS) for better compatibility with AI libraries
     $pipArgs = @(
         "-m", "pip",
         "install",
-        "--upgrade",  # Ensure all PyTorch packages have compatible versions
-        "torch",
-        "torchvision",
-        "torchaudio",
+        "torch==2.1.2+cu118",
+        "torchvision==0.16.2+cu118",
+        "torchaudio==2.1.2+cu118",
         "--index-url",
         "https://download.pytorch.org/whl/cu118",
         "--progress-bar", "on"  # Force progress bar display
