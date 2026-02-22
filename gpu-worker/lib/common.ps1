@@ -32,22 +32,22 @@ function Enable-AnsiColors {
 # Print functions
 function Write-Success {
     param([string]$Message)
-    Write-Host "$($Colors.Green)✓$($Colors.Reset) $Message"
+    Write-Host "$($Colors.Green)[OK]$($Colors.Reset) $Message"
 }
 
 function Write-Info {
     param([string]$Message)
-    Write-Host "$($Colors.Blue)▸$($Colors.Reset) $Message"
+    Write-Host "$($Colors.Blue)[i]$($Colors.Reset) $Message"
 }
 
 function Write-WarningMsg {
     param([string]$Message)
-    Write-Host "$($Colors.Yellow)⚠$($Colors.Reset) $Message"
+    Write-Host "$($Colors.Yellow)[!]$($Colors.Reset) $Message"
 }
 
 function Write-ErrorMsg {
     param([string]$Message)
-    Write-Host "$($Colors.Red)✗$($Colors.Reset) $Message"
+    Write-Host "$($Colors.Red)[X]$($Colors.Reset) $Message"
 }
 
 function Write-Step {
