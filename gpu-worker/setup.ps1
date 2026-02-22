@@ -595,9 +595,9 @@ Invoke-Step "Installation Test" {
     Write-Info "Testing Python imports..."
 
     $tests = @(
-        @{ Name = "PyTorch"; Command = "import torch; print(torch.__version__)" },
-        @{ Name = "CUDA"; Command = "import torch; print('Available' if torch.cuda.is_available() else 'Not Available')" },
-        @{ Name = "FastAPI"; Command = "import fastapi; print(fastapi.__version__)" },
+        @{ Name = "PyTorch"; Command = "import torch; print(torch.__version__)" }
+        @{ Name = "CUDA"; Command = "import torch; print(torch.cuda.is_available())" }
+        @{ Name = "FastAPI"; Command = "import fastapi; print(fastapi.__version__)" }
         @{ Name = "Diffusers"; Command = "import diffusers; print(diffusers.__version__)" }
     )
 
