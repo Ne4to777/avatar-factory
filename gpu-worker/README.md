@@ -256,12 +256,14 @@ python server.py
 
 ## 11. API и документация
 
-Описание endpoints: [docs/PROJECT_SUMMARY.md](../docs/PROJECT_SUMMARY.md).
-
-Эндпоинты:
+GPU сервер предоставляет REST API для генерации видео с аватарами:
 
 - `GET /health` — статус GPU и моделей
-- `POST /generate` — генерация видео (используется воркером Avatar Factory)
+- `POST /api/tts` — синтез речи
+- `POST /api/lipsync` — lip-sync видео
+- `POST /api/generate-background` — генерация фона
+
+Полная документация API: [docs/PROJECT_SUMMARY.md](../docs/PROJECT_SUMMARY.md)
 
 ---
 

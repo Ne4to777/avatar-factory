@@ -32,7 +32,7 @@ sudo apt install nodejs npm postgresql redis-server
 ### B. Клонируйте и установите
 
 ```bash
-git clone https://github.com/yourusername/avatar-factory.git
+git clone https://github.com/Ne4to777/avatar-factory.git
 cd avatar-factory
 npm install
 ```
@@ -367,7 +367,7 @@ npm run dev     # Ctrl+C
 ## Поддержка
 
 - 📖 [Полная документация](./README.md)
-- 🐛 [GitHub Issues](https://github.com/yourusername/avatar-factory/issues)
+- 🐛 [GitHub Issues](https://github.com/Ne4to777/avatar-factory/issues)
 - 💬 [Telegram](https://t.me/yourusername)
 - 📧 Email: your@email.com
 
