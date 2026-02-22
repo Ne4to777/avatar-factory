@@ -329,6 +329,7 @@ $step6 = Invoke-Step "PyTorch Installation" {
     Write-Info "Installing PyTorch with CUDA support..."
     if (-not $Silent) {
         Write-Host "  This may take 5-10 minutes depending on your internet speed..."
+        Write-Host "  Progress will be shown below..."
         Write-Host ""
     }
     
@@ -346,22 +347,13 @@ $step6 = Invoke-Step "PyTorch Installation" {
         $pipArgs += "--quiet"
     }
     
-    # Capture output and errors
-    $output = & $venvPython @pipArgs 2>&1
+    # Show output in real-time (don't capture)
+    & $venvPython @pipArgs
     $exitCode = $LASTEXITCODE
-    
-    # Show output in non-silent mode
-    if (-not $Silent) {
-        $output | ForEach-Object { Write-Host $_ }
-    }
     
     if ($exitCode -ne 0) {
         Write-Host ""
         Write-ErrorMsg "PyTorch installation failed with exit code: $exitCode"
-        Write-Host ""
-        Write-Host "$($Colors.Yellow)Last 20 lines of output:$($Colors.Reset)"
-        $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
-        Write-Host ""
         throw "Failed to install PyTorch (exit code: $exitCode)"
     }
     
@@ -400,23 +392,18 @@ $step7 = Invoke-Step "Python Dependencies" {
     if ($Silent) {
         $pipArgs += "--quiet"
     }
-
-    # Capture output and errors
-    $output = & $venvPython @pipArgs 2>&1
-    $exitCode = $LASTEXITCODE
-
-    # Show output in non-silent mode
-    if (-not $Silent) {
-        $output | ForEach-Object { Write-Host $_ }
+    else {
+        Write-Host "  Progress will be shown below..."
+        Write-Host ""
     }
+
+    # Show output in real-time
+    & $venvPython @pipArgs
+    $exitCode = $LASTEXITCODE
 
     if ($exitCode -ne 0) {
         Write-Host ""
         Write-ErrorMsg "Dependencies installation failed with exit code: $exitCode"
-        Write-Host ""
-        Write-Host "$($Colors.Yellow)Last 30 lines of output:$($Colors.Reset)"
-        $output | Select-Object -Last 30 | ForEach-Object { Write-Host "  $_" }
-        Write-Host ""
         throw "Failed to install Python dependencies (exit code: $exitCode)"
     }
 
@@ -475,15 +462,14 @@ $step7_5 = Invoke-Step "xformers Installation" {
     if ($Silent) {
         $xformersArgs += "--quiet"
     }
-    
-    # Capture output and errors
-    $output = & $venvPython @xformersArgs 2>&1
-    $exitCode = $LASTEXITCODE
-    
-    # Show output in non-silent mode
-    if (-not $Silent) {
-        $output | ForEach-Object { Write-Host $_ }
+    else {
+        Write-Host "  Installing xformers..."
+        Write-Host ""
     }
+    
+    # Show output in real-time
+    & $venvPython @xformersArgs
+    $exitCode = $LASTEXITCODE
     
     if ($exitCode -eq 0) {
         $installedVersion = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
@@ -492,13 +478,6 @@ $step7_5 = Invoke-Step "xformers Installation" {
     else {
         Write-WarningMsg "xformers installation failed (this is optional)"
         Write-Info "Diffusers will work without xformers, but slower"
-        
-        if (-not $Silent) {
-            Write-Host ""
-            Write-Host "$($Colors.Yellow)Error details (last 10 lines):$($Colors.Reset)"
-            $output | Select-Object -Last 10 | ForEach-Object { Write-Host "  $_" }
-            Write-Host ""
-        }
     }
 }
 # xformers is optional, don't fail if it doesn't install
@@ -550,16 +529,16 @@ $step8 = Invoke-Step "SadTalker Setup" {
     Push-Location "SadTalker"
     try {
         if (Test-Path "requirements.txt") {
-            # Capture output for better error reporting
             $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
             if ($Silent) { $sadPipArgs += "--quiet" }
-            
-            $output = & $venvPythonPath @sadPipArgs 2>&1
-            $exitCode = $LASTEXITCODE
-            
-            if (-not $Silent) {
-                $output | ForEach-Object { Write-Host $_ }
+            else {
+                Write-Host "  Installing SadTalker dependencies (this may take a few minutes)..."
+                Write-Host ""
             }
+            
+            # Show output in real-time
+            & $venvPythonPath @sadPipArgs
+            $exitCode = $LASTEXITCODE
 
             if ($exitCode -eq 0) {
                 Write-Success "SadTalker dependencies installed"
@@ -567,10 +546,6 @@ $step8 = Invoke-Step "SadTalker Setup" {
             else {
                 Write-Host ""
                 Write-ErrorMsg "SadTalker dependencies installation failed"
-                Write-Host ""
-                Write-Host "$($Colors.Yellow)Last 20 lines of output:$($Colors.Reset)"
-                $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
-                Write-Host ""
                 throw "Failed to install SadTalker dependencies (exit code: $exitCode)"
             }
         }
