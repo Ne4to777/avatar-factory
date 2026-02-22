@@ -52,8 +52,11 @@ if %ADMIN_CHECK1% neq 0 (
 echo %GREEN%Administrator rights confirmed.%NC%
 echo.
 
+REM Change to script directory
+cd /d "%~dp0"
+
 REM Run setup.ps1
-if not exist "%~dp0setup.ps1" (
+if not exist "setup.ps1" (
     echo %RED%Error: setup.ps1 not found%NC%
     pause
     exit /b 1
@@ -61,7 +64,7 @@ if not exist "%~dp0setup.ps1" (
 
 echo %GREEN%Running setup...%NC%
 echo.
-powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0setup.ps1" %*
+powershell -ExecutionPolicy Bypass -NoProfile -File ".\setup.ps1" %*
 set SETUP_EXIT=%errorLevel%
 
 echo.
