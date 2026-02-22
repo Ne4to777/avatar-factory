@@ -89,7 +89,6 @@ async def load_models():
         
         # 3. Silero TTS (русский)
         logger.info("Loading Silero TTS...")
-        import torch
         tts_model, _ = torch.hub.load(
             repo_or_dir='snakers4/silero-models',
             model='silero_tts',
