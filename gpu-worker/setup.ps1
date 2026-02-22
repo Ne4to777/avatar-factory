@@ -70,7 +70,7 @@ if ($Repair) {
 
 # Step counter
 $script:CurrentStep = 0
-$script:TotalSteps = 12
+$script:TotalSteps = 13
 if ($SkipModels) { $script:TotalSteps-- }
 if ($NoService) { $script:TotalSteps-- }
 
@@ -406,6 +406,39 @@ $step7 = Invoke-Step "Python Dependencies" {
     $script:InstallationState.DepsInstalled = $true
 }
 if (-not $step7) { exit 1 }
+
+# === STEP 7.5: Install xformers (requires PyTorch) ===
+$step7_5 = Invoke-Step "xformers Installation" {
+    Write-Info "Installing xformers (memory-efficient attention)..."
+    Write-Info "This requires PyTorch and may take a few minutes..."
+
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    
+    # Try to install prebuilt wheel first (much faster)
+    $xformersArgs = @(
+        "-m", "pip",
+        "install",
+        "xformers==0.0.23.post1",
+        "--index-url",
+        "https://download.pytorch.org/whl/cu118"
+    )
+    
+    if ($Silent) {
+        $xformersArgs += "--quiet"
+    }
+    
+    & $venvPython @xformersArgs
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "xformers installed successfully"
+    }
+    else {
+        Write-WarningMsg "xformers installation failed (this is optional)"
+        Write-Info "Diffusers will work without xformers, but slower"
+    }
+}
+# xformers is optional, don't fail if it doesn't install
+# if (-not $step7_5) { exit 1 }
 
 # === STEP 8: Clone and Setup SadTalker ===
 $step8 = Invoke-Step "SadTalker Setup" {
