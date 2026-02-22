@@ -6,14 +6,15 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# ANSI color codes for Windows 10+
+# ANSI color codes for Windows 10+ (PowerShell 5.1 compatible)
+$script:ESC = [char]27
 $script:Colors = @{
-    Red    = "`e[91m"
-    Green  = "`e[92m"
-    Yellow = "`e[93m"
-    Blue   = "`e[94m"
-    Cyan   = "`e[96m"
-    Reset  = "`e[0m"
+    Red    = "$($script:ESC)[91m"
+    Green  = "$($script:ESC)[92m"
+    Yellow = "$($script:ESC)[93m"
+    Blue   = "$($script:ESC)[94m"
+    Cyan   = "$($script:ESC)[96m"
+    Reset  = "$($script:ESC)[0m"
 }
 
 # Enable ANSI colors in Windows Console
