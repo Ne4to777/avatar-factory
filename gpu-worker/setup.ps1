@@ -351,13 +351,26 @@ $step6 = Invoke-Step "PyTorch Installation" {
     $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
     
     # Quick check if torch is already installed
-    $torchInstalled = & $venvPython -c "import torch; print(torch.__version__)" 2>$null
-    
-    if ($torchInstalled -and -not $Force) {
-        Write-Success "PyTorch already installed: $torchInstalled"
-        Write-Info "CUDA support will be verified in tests (Step 12)"
-        $script:InstallationState.TorchInstalled = $true
-        return
+    try {
+        $torchCheck = & $venvPython -c "import torch; print('OK'); print(torch.__version__)" 2>&1
+        $torchExitCode = $LASTEXITCODE
+        
+        if ($torchExitCode -eq 0 -and $torchCheck -match "OK") {
+            $torchVersion = ($torchCheck | Select-Object -Last 1).Trim()
+            Write-Success "PyTorch already installed: $torchVersion"
+            Write-Info "Use -Force to reinstall"
+            $script:InstallationState.TorchInstalled = $true
+            
+            if (-not $Force) {
+                return
+            }
+            else {
+                Write-Info "Force flag set, reinstalling PyTorch..."
+            }
+        }
+    }
+    catch {
+        # PyTorch not installed or check failed, continue to install
     }
     
     # Install PyTorch with CUDA 11.8
