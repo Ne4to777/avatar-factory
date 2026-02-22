@@ -22,6 +22,7 @@ $LOG_FILE = Join-Path $PSScriptRoot "logs\install.log"
 
 $VENV_PATH = "venv"
 $PYTHON_VERSION_MIN = "3.10"
+$PYTHON_VERSION_MAX = "3.11"  # Python 3.12 has compatibility issues with AI libraries
 $CUDA_VERSION_RECOMMENDED = "11.8"
 
 # Initialize logging
@@ -153,10 +154,26 @@ $step2 = Invoke-Step "Python Installation" {
             $major = [int]$Matches[1]
             $minor = [int]$Matches[2]
 
-            if ($major -eq 3 -and $minor -ge 10) {
+            if ($major -eq 3 -and $minor -ge 10 -and $minor -le 11) {
                 Write-Success "Python $major.$minor found"
                 $script:InstallationState.PythonReady = $true
                 return
+            }
+            elseif ($major -eq 3 -and $minor -eq 12) {
+                Write-Host ""
+                Write-ErrorMsg "Python 3.12 detected - NOT COMPATIBLE!"
+                Write-Host ""
+                Write-Host "  $($Colors.Yellow)Python 3.12 has breaking changes that prevent AI libraries from working.$($Colors.Reset)"
+                Write-Host ""
+                Write-Host "  Please install Python 3.10 (recommended):"
+                Write-Host "  $($Colors.Cyan)https://www.python.org/downloads/release/python-31011/$($Colors.Reset)"
+                Write-Host ""
+                Write-Host "  After installation:"
+                Write-Host "  1. Close this window"
+                Write-Host "  2. Delete venv folder: $($Colors.Yellow)rmdir /s /q venv$($Colors.Reset)"
+                Write-Host "  3. Run install.bat again"
+                Write-Host ""
+                throw "Python 3.12 is not compatible. Please install Python 3.10."
             }
         }
     }
