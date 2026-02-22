@@ -6,18 +6,37 @@ SadTalker Inference Wrapper
 import os
 import sys
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Добавляем SadTalker в path
 SADTALKER_PATH = Path(__file__).parent / "SadTalker"
+logger.info(f"SadTalker path: {SADTALKER_PATH}")
+logger.info(f"SadTalker exists: {SADTALKER_PATH.exists()}")
+
+if not SADTALKER_PATH.exists():
+    error_msg = (
+        "SadTalker not found! "
+        "Please clone SadTalker repository: "
+        "git clone https://github.com/OpenTalker/SadTalker.git"
+    )
+    logger.error(error_msg)
+    raise ImportError(error_msg)
+
 sys.path.insert(0, str(SADTALKER_PATH))
+logger.info(f"Added SadTalker to sys.path")
 
 try:
+    logger.info("Attempting to import SadTalker inference...")
     from inference import InferenceWrapper
-except ImportError:
-    print("❌ SadTalker not found!")
-    print("   Please clone SadTalker repository:")
-    print("   git clone https://github.com/OpenTalker/SadTalker.git")
-    sys.exit(1)
+    logger.info("SadTalker inference imported successfully")
+except ImportError as e:
+    error_msg = f"Failed to import SadTalker: {e}"
+    logger.error(error_msg)
+    logger.error("This usually means SadTalker dependencies are not installed.")
+    logger.error("Try: cd SadTalker && ..\\venv\\Scripts\\python.exe -m pip install -r requirements.txt")
+    raise ImportError(error_msg) from e
 
 class SadTalkerInference:
     """
