@@ -61,8 +61,17 @@ if not exist "server.py" (
     exit /b 1
 )
 
-REM Activate venv
-call venv\Scripts\activate.bat
+REM Set Python path explicitly
+set VENV_PYTHON=venv\Scripts\python.exe
+
+REM Check if Python exists in venv
+if not exist "%VENV_PYTHON%" (
+    echo [ERROR] Python not found in virtual environment
+    echo   Expected: %VENV_PYTHON%
+    echo   Run install.bat again
+    pause
+    exit /b 1
+)
 
 REM Check/create .env
 if not exist ".env" (
@@ -88,7 +97,7 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /C:"IPv4"') do (
 )
 :ip_found
 
-echo [OK] Virtual environment activated
+echo [OK] Python found: %VENV_PYTHON%
 echo [OK] Configuration loaded
 echo.
 echo Server will be available at:
@@ -100,8 +109,8 @@ echo.
 echo ----------------------------------------
 echo.
 
-REM Start server
-python server.py
+REM Start server with explicit Python path
+"%VENV_PYTHON%" server.py
 set SERVER_EXIT=!errorLevel!
 
 REM Server stopped
