@@ -111,7 +111,7 @@ cd gpu-worker && make install && make install-models && make start
 
 ### Проверка
 
-Полное руководство: [gpu-worker/README.md](../gpu-worker/README.md)
+Полное руководство: [gpu-worker/README.md](./gpu-worker/README.md)
 
 Проверьте, что сервер работает:
 ```bash

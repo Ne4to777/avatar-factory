@@ -93,15 +93,14 @@ npm run start:dev
 
 **GPU Worker (стационарный ПК):**
 
-```bash
+Одна команда на Windows — установка и запуск:
+```cmd
 cd gpu-worker
-
-# Windows
-install.bat && start.bat
-
-# Linux/macOS
-make install && make start
+install.bat
 ```
+После установки: `start.bat`. Подробности: [gpu-worker/README.md](./gpu-worker/README.md)
+
+**Linux/macOS:** `cd gpu-worker && make install && make install-models && make start`
 
 ### 📖 Детальная установка
 
@@ -141,20 +140,15 @@ docker-compose --profile full up -d
 ```
 
 ### 4. Настройте GPU Worker (стационарный ПК)
-```bash
+
+**Windows (одна команда):**
+```cmd
 cd gpu-worker
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Установите PyTorch с CUDA
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
-# Установите зависимости
-pip install -r requirements.txt
-
-# Скачайте модели (единоразово, ~10GB)
-python scripts/download_models.py
+install.bat
 ```
+Запустите от имени администратора. После установки: `start.bat`
+
+Полное руководство и ручная установка: [gpu-worker/README.md](./gpu-worker/README.md)
 
 ### 5. Запустите приложение
 

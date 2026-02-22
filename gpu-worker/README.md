@@ -1,159 +1,124 @@
-# GPU Worker Setup Guide
+# GPU Worker — Руководство по установке
 
-Инструкция по установке GPU сервера на стационарный ПК с RTX 4070 Ti.
+Сервер AI-моделей для Avatar Factory, работающий на стационарном ПК с NVIDIA GPU.
 
-## Системные требования
+## 1. Обзор
 
-- **GPU:** NVIDIA RTX 4070 Ti (12GB VRAM) или лучше
-- **CUDA:** 11.8 или выше
-- **Python:** 3.10 или выше
-- **RAM:** 16GB+
-- **Место на диске:** ~20GB для моделей
+**GPU Worker** — отдельный компонент Avatar Factory, который выполняет тяжёлые AI-задачи (генерация видео, TTS, Stable Diffusion) на компьютере с видеокартой NVIDIA.
 
-## Установка (Windows)
+**Почему отдельно?**
 
-### 1. Установите Python 3.10+
+- AI-модели требуют 12+ GB VRAM и эффективно работают только на GPU
+- Можно использовать мощный стационарный ПК, пока ноутбук остаётся для разработки
+- Сервер принимает запросы по HTTP с основного приложения
 
-Скачайте с [python.org](https://www.python.org/downloads/)
+## 2. Системные требования
 
-Проверьте установку:
-```cmd
-python --version
-```
+| Требование | Минимум |
+|------------|---------|
+| **ОС** | Windows 10/11 (64-bit) |
+| **GPU** | NVIDIA с поддержкой CUDA (рекомендуется RTX 3070+ / 8GB+ VRAM) |
+| **RAM** | 16 GB |
+| **Место на диске** | ~30 GB (модели + зависимости) |
+| **Сеть** | Доступен в LAN для подключения ноутбука |
 
-### 2. Установите CUDA Toolkit 11.8
+**Перед установкой:**
 
-Скачайте с [NVIDIA Developer](https://developer.nvidia.com/cuda-11-8-0-download-archive)
+- [Python 3.10+](https://www.python.org/downloads/) — устанавливается автоматически при необходимости
+- [CUDA Toolkit 11.8](https://developer.nvidia.com/cuda-11-8-0-download-archive) — рекомендуется установить вручную
+- Запуск `install.bat` **от имени администратора** (для Python, firewall и т.д.)
 
-Проверьте установку:
-```cmd
-nvcc --version
-nvidia-smi
-```
+## 3. One-Command Installation
 
-### 3. Клонируйте репозиторий (если еще не сделали)
+### Windows — одна команда
 
-```cmd
-cd C:\Projects
-git clone https://github.com/yourusername/avatar-factory.git
-cd avatar-factory\gpu-worker
-```
+1. Клонируйте репозиторий (если ещё не сделали):
 
-### 4. Создайте виртуальное окружение
+   ```cmd
+   git clone https://github.com/Ne4to777/avatar-factory.git
+   cd avatar-factory\gpu-worker
+   ```
 
-```cmd
-python -m venv venv
-venv\Scripts\activate
-```
+2. Запустите установщик **от имени администратора**:
 
-### 5. Установите PyTorch с CUDA
+   ```cmd
+   install.bat
+   ```
 
-```cmd
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
+3. Следуйте инструкциям на экране. Установка займёт 15–30 минут (в зависимости от скорости интернета).
 
-Проверьте GPU:
-```cmd
-python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
-```
+4. После установки запустите сервер:
 
-Должно вывести:
-```
-True
-NVIDIA GeForce RTX 4070 Ti
-```
+   ```cmd
+   start.bat
+   ```
 
-### 6. Установите зависимости
+**Важно:** правая кнопка по `install.bat` → «Запуск от имени администратора».
 
-```cmd
-pip install -r requirements.txt
-```
+### Что делает install.bat
 
-### 7. Клонируйте SadTalker
+- Проверяет систему (Python, CUDA, GPU)
+- При необходимости устанавливает Python 3.11 через winget
+- Создаёт виртуальное окружение
+- Устанавливает PyTorch с поддержкой CUDA
+- Устанавливает зависимости (FastAPI, diffusers и др.)
+- Клонирует SadTalker и настраивает его
+- Скачивает AI-модели (~10 GB, по запросу)
+- Создаёт `.env` с API-ключом
+- Настраивает firewall
+- Проверяет установку
 
-```cmd
-git clone https://github.com/OpenTalker/SadTalker.git
-cd SadTalker
-pip install -r requirements.txt
-cd ..
-```
+## 4. Что устанавливается
 
-### 8. Скачайте модели
+| Компонент | Описание |
+|-----------|----------|
+| **Python venv** | Изолированное окружение в `venv/` |
+| **PyTorch + CUDA** | Глубокое обучение на GPU |
+| **FastAPI + Uvicorn** | HTTP API сервер |
+| **SadTalker** | Lip-sync анимация лица |
+| **Stable Diffusion XL** | Генерация фонов |
+| **Silero TTS** | Русская озвучка |
+| **Real-ESRGAN** | Улучшение качества |
+| **FFmpeg** | Обработка видео |
 
-Создайте скрипт `download_models.py`:
+## 5. Конфигурация
 
-```python
-import torch
-from diffusers import StableDiffusionXLPipeline
-import os
+Файл `.env` создаётся автоматически при установке. В нём:
 
-print("📥 Downloading models...")
-
-# 1. Silero TTS (автоматически загрузится при первом использовании)
-print("1/3 Silero TTS...")
-model, _ = torch.hub.load(
-    repo_or_dir='snakers4/silero-models',
-    model='silero_tts',
-    language='ru',
-    speaker='v3_1_ru'
-)
-print("✅ Silero TTS ready")
-
-# 2. Stable Diffusion XL
-print("2/3 Stable Diffusion XL...")
-pipeline = StableDiffusionXLPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-xl-base-1.0",
-    torch_dtype=torch.float16,
-    use_safetensors=True,
-    variant="fp16"
-)
-print("✅ Stable Diffusion XL ready")
-
-# 3. SadTalker checkpoints
-print("3/3 SadTalker checkpoints...")
-print("Run: cd SadTalker && bash scripts/download_models.sh")
-print("✅ All models ready!")
-```
-
-Запустите:
-```cmd
-python download_models.py
-```
-
-### 9. Скачайте чекпоинты SadTalker
-
-```cmd
-cd SadTalker
-bash scripts/download_models.sh
-cd ..
-```
-
-Или скачайте вручную:
-- [SadTalker checkpoints](https://github.com/OpenTalker/SadTalker#-quick-start)
-
-Поместите в `SadTalker/checkpoints/`
-
-### 10. Создайте `.env` файл
-
-```cmd
-copy .env.example .env
-notepad .env
-```
-
-Отредактируйте:
 ```env
-GPU_API_KEY=your-secret-gpu-key-12345
+GPU_API_KEY=<сгенерированный ключ>
 HOST=0.0.0.0
 PORT=8001
 ```
 
-### 11. Запустите сервер
+**Сохраните `GPU_API_KEY`** и укажите его в `.env` на ноутбуке вместе с адресом GPU сервера:
+
+```env
+GPU_SERVER_URL="http://192.168.1.100:8001"
+GPU_API_KEY=<ваш ключ из gpu-worker>
+```
+
+Узнать IP ПК: `ipconfig` (Windows) или `ifconfig` (macOS/Linux).
+
+## 6. Запуск сервера
+
+### Ручной запуск
 
 ```cmd
+cd gpu-worker
+start.bat
+```
+
+Или:
+
+```cmd
+cd gpu-worker
+venv\Scripts\activate
 python server.py
 ```
 
-Вы должны увидеть:
+Ожидаемый вывод:
+
 ```
 🚀 Loading AI models...
 ✅ GPU: NVIDIA GeForce RTX 4070 Ti (12.0GB VRAM)
@@ -164,184 +129,153 @@ python server.py
 🚀 Starting GPU Server on 0.0.0.0:8001
 ```
 
-### 12. Проверьте работу
+### Windows Service (автозапуск)
 
-Откройте браузер:
-```
-http://localhost:8001/health
-```
+Чтобы сервер запускался при загрузке Windows:
 
-Должно вывести JSON со статусом GPU.
-
-## Установка (Linux/Ubuntu)
-
-### 1. Установите зависимости
-
-```bash
-sudo apt update
-sudo apt install -y python3.10 python3-pip python3-venv git ffmpeg
+```powershell
+.\service-install.ps1
 ```
 
-### 2. Установите CUDA
+## 7. Windows Service
 
-```bash
-wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run
-sudo sh cuda_11.8.0_520.61.05_linux.run
+### Установка службы
+
+Запустите **от имени администратора**:
+
+```powershell
+.\service-install.ps1
 ```
 
-Добавьте в `~/.bashrc`:
-```bash
-export PATH=/usr/local/cuda-11.8/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH
-```
+Преимущества:
 
-### 3. Установите PyTorch
+- Автозапуск при загрузке Windows
+- Работает в фоне
+- Автоматический перезапуск при сбое
+- Логи в `logs\service.log`
 
-```bash
-cd gpu-worker
-python3 -m venv venv
-source venv/bin/activate
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
+### Управление службой
 
-### 4. Продолжайте с шага 6 из инструкции Windows
-
-## Использование
-
-### Запуск сервера
-
-**Windows:**
 ```cmd
+net start AvatarFactoryGPU   # Запуск
+net stop AvatarFactoryGPU    # Остановка
+```
+
+Или через `stop.bat` / `start.bat` — они учитывают наличие службы.
+
+Перезапуск:
+
+```powershell
+Restart-Service AvatarFactoryGPU
+```
+
+Или: `net stop AvatarFactoryGPU` затем `net start AvatarFactoryGPU`
+
+Удаление службы:
+
+```powershell
+.\service-uninstall.ps1
+```
+
+## 8. Troubleshooting
+
+### «Not running as Administrator»
+
+Запустите `install.bat` от имени администратора (ПКМ → «Запуск от имени администратора»).
+
+### «CUDA out of memory»
+
+Уменьшите разрешение в `server.py`:
+
+```python
+width = 768   # вместо 1080
+height = 1024 # вместо 1920
+```
+
+### «GPU Server unavailable» (на ноутбуке)
+
+1. Проверьте, запущен ли сервер: `curl http://192.168.1.100:8001/health`
+2. Убедитесь, что `GPU_SERVER_URL` и `GPU_API_KEY` в `.env` ноутбука совпадают с настройками на ПК
+3. Откройте порт в firewall:
+   ```cmd
+   netsh advfirewall firewall add rule name="Avatar Factory" dir=in action=allow protocol=TCP localport=8001
+   ```
+
+### Медленная генерация
+
+1. Проверьте нагрузку: `nvidia-smi`
+2. Закройте другие приложения, использующие GPU
+3. Обновите драйверы NVIDIA
+
+### Ошибки импорта / «module not found»
+
+```cmd
+venv\Scripts\activate
+pip install --upgrade pip
+pip install -r requirements.txt --force-reinstall
+```
+
+### Сервер не стартует
+
+Логи установки: `logs\install.log`
+
+Логи службы: `logs\service.log`, `logs\service-error.log`
+
+## 9. Ручная установка (для опытных пользователей)
+
+Если автоматическая установка не подходит:
+
+1. Python 3.10+, CUDA 11.8 — установите вручную
+2. Создайте venv: `python -m venv venv`
+3. Активируйте: `venv\Scripts\activate`
+4. PyTorch: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
+5. Зависимости: `pip install -r requirements.txt`
+6. SadTalker: `git clone https://github.com/OpenTalker/SadTalker.git` + `pip install -r SadTalker/requirements.txt`
+7. Модели: `python download_models.py`
+8. `.env`: скопируйте из примера и задайте `GPU_API_KEY`
+
+**Linux/macOS:**
+
+```bash
 cd gpu-worker
+make install
+make install-models   # ~10 GB, первый раз
+make start
+```
+
+## 10. Разработка
+
+Для разработки и отладки:
+
+```cmd
 venv\Scripts\activate
 python server.py
 ```
 
-**Linux:**
-```bash
-cd gpu-worker
-source venv/bin/activate
-python server.py
-```
+Изменения в коде требуют перезапуска сервера.
 
-### Автозапуск (Windows Service)
+## 11. API и документация
 
-Используйте [NSSM](https://nssm.cc/):
+Описание endpoints: [docs/PROJECT_SUMMARY.md](../docs/PROJECT_SUMMARY.md).
 
-```cmd
-nssm install AvatarFactoryGPU "C:\Projects\avatar-factory\gpu-worker\venv\Scripts\python.exe" "C:\Projects\avatar-factory\gpu-worker\server.py"
-nssm start AvatarFactoryGPU
-```
+Эндпоинты:
 
-### Автозапуск (Linux systemd)
+- `GET /health` — статус GPU и моделей
+- `POST /generate` — генерация видео (используется воркером Avatar Factory)
 
-Создайте `/etc/systemd/system/avatar-factory-gpu.service`:
+---
 
-```ini
-[Unit]
-Description=Avatar Factory GPU Server
-After=network.target
-
-[Service]
-Type=simple
-User=your-username
-WorkingDirectory=/home/your-username/avatar-factory/gpu-worker
-Environment="PATH=/home/your-username/avatar-factory/gpu-worker/venv/bin"
-ExecStart=/home/your-username/avatar-factory/gpu-worker/venv/bin/python server.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Запустите:
-```bash
-sudo systemctl enable avatar-factory-gpu
-sudo systemctl start avatar-factory-gpu
-sudo systemctl status avatar-factory-gpu
-```
-
-## Мониторинг
-
-### Проверка GPU нагрузки
-
-**Windows:**
-```cmd
-nvidia-smi -l 1
-```
-
-**Linux:**
-```bash
-watch -n 1 nvidia-smi
-```
-
-### Логи сервера
-
-```bash
-tail -f /tmp/avatar-factory/gpu-server.log
-```
-
-## Оптимизация производительности
-
-### 1. Включите xformers
-
-```bash
-pip install xformers
-```
-
-### 2. Используйте FP16 precision
-
-Уже включено в коде по умолчанию.
-
-### 3. Настройте batch size
-
-В `server.py` измените:
-```python
-sd_pipeline.enable_attention_slicing(1)
-```
-
-### 4. Очистка VRAM
-
-```python
-import torch
-torch.cuda.empty_cache()
-```
-
-## Troubleshooting
-
-### CUDA out of memory
-
-Уменьшите разрешение или batch size:
-```python
-# В server.py
-width = 768  # вместо 1080
-height = 1024  # вместо 1920
-```
-
-### Медленная генерация
-
-1. Проверьте температуру GPU: `nvidia-smi`
-2. Закройте другие приложения использующие GPU
-3. Обновите драйвера NVIDIA
-
-### Ошибки импорта
-
-```bash
-pip install --upgrade pip
-pip install --force-reinstall -r requirements.txt
-```
-
-## Производительность RTX 4070 Ti
+## Производительность (RTX 4070 Ti)
 
 | Задача | Время |
 |--------|-------|
-| TTS (10 сек текста) | 1-2 сек |
-| SadTalker (10 сек видео) | 30-60 сек |
-| Stable Diffusion XL | 5-10 сек |
+| TTS (10 сек текста) | 1–2 сек |
+| SadTalker (10 сек видео) | 30–60 сек |
+| Stable Diffusion XL | 5–10 сек |
 
-**Итого:** ~40-70 сек на одно видео (15-30 сек)
+**Итого:** ~40–70 сек на одно видео (15–30 сек).
 
 ## Поддержка
 
-- GitHub Issues: [issues](https://github.com/yourusername/avatar-factory/issues)
+- [GitHub Issues](https://github.com/Ne4to777/avatar-factory/issues)
 - Telegram: @yourusername
