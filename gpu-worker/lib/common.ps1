@@ -1,5 +1,5 @@
-# Common PowerShell utilities for Avatar Factory GPU Worker
-# Used by all installation scripts
+# Avatar Factory GPU Worker - Common PowerShell Utilities
+# Windows 10/11 only - uses Windows-specific cmdlets (Get-CimInstance, Get-NetIPAddress, etc.)
 # Dot-source with: . "$PSScriptRoot\lib\common.ps1"
 
 # Enable strict mode
@@ -40,12 +40,12 @@ function Write-Info {
     Write-Host "$($Colors.Blue)▸$($Colors.Reset) $Message"
 }
 
-function Write-Warning {
+function Write-WarningMsg {
     param([string]$Message)
     Write-Host "$($Colors.Yellow)⚠$($Colors.Reset) $Message"
 }
 
-function Write-Error {
+function Write-ErrorMsg {
     param([string]$Message)
     Write-Host "$($Colors.Red)✗$($Colors.Reset) $Message"
 }
@@ -79,14 +79,16 @@ function Test-Administrator {
 
 # Restart script with administrator privileges
 function Restart-AsAdministrator {
-    param([string[]]$Arguments)
+    param(
+        [string[]]$Arguments,
+        [string]$ScriptPath = $MyInvocation.PSCommandPath
+    )
 
     if (-not (Test-Administrator)) {
-        Write-Warning "This operation requires administrator privileges"
+        Write-WarningMsg "This operation requires administrator privileges"
         Write-Info "Restarting with elevation..."
 
-        $scriptPath = $MyInvocation.PSCommandPath
-        Start-Process powershell.exe -ArgumentList "-ExecutionPolicy Bypass -File `"$scriptPath`" $($Arguments -join ' ')" -Verb RunAs
+        Start-Process powershell.exe -ArgumentList "-ExecutionPolicy Bypass -File `"$ScriptPath`" $($Arguments -join ' ')" -Verb RunAs
         exit
     }
 }
@@ -169,7 +171,9 @@ function Get-FileWithProgress {
         # Progress handler
         $progressHandler = {
             param($sender, $e)
-            $percent = [math]::Round(($e.BytesReceived / $e.TotalBytesToReceive) * 100, 2)
+            $percent = if ($e.TotalBytesToReceive -gt 0) {
+                [math]::Round(($e.BytesReceived / $e.TotalBytesToReceive) * 100, 2)
+            } else { 0 }
             Write-Progress -Activity "Downloading $(Split-Path $OutputPath -Leaf)" `
                 -Status "$percent% Complete" `
                 -PercentComplete $percent

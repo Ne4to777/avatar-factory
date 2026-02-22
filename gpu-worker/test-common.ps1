@@ -6,8 +6,8 @@ Write-Banner "Testing Common Library"
 
 Write-Info "Testing print functions..."
 Write-Success "Success message works"
-Write-Warning "Warning message works"
-Write-Error "Error message works"
+Write-WarningMsg "Warning message works"
+Write-ErrorMsg "Error message works"
 Write-Step -Current 1 -Total 3 -Message "Step message works"
 
 if ($env:OS -eq 'Windows_NT') {
@@ -20,7 +20,7 @@ if ($env:OS -eq 'Windows_NT') {
     Write-Host "Internet: $(Test-InternetConnection)"
 }
 else {
-    Write-Warning "Skipping Windows-specific system checks (run on Windows for full test)"
+    Write-WarningMsg "Skipping Windows-specific system checks (run on Windows for full test)"
 }
 
 Write-Info "Testing utilities..."
