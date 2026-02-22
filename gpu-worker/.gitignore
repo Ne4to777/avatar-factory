@@ -1,0 +1,30 @@
+# Installation logs
+logs/*.log
+logs/*.txt
+
+# Downloaded tools
+tools/nssm.exe
+tools/nssm-*.zip
+
+# Virtual environment
+venv/
+
+# Environment configuration
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# AI Models cache
+models/
+checkpoints/
+SadTalker/
+
+# Temporary files
+*.tmp
+*.temp
