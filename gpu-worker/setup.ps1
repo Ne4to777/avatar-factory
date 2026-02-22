@@ -388,7 +388,7 @@ $step7 = Invoke-Step "Python Dependencies" {
     foreach ($package in $packages) {
         $installed = python -c "import $package; print('OK')" 2>$null
         if ($installed -eq "OK") {
-            Write-Host "  $($Colors.Green)✓$($Colors.Reset) $package"
+            Write-Host "  $($Colors.Green)[OK]$($Colors.Reset) $package"
         }
         else {
             Write-WarningMsg "  $package import failed"
@@ -595,10 +595,10 @@ Invoke-Step "Installation Test" {
     Write-Info "Testing Python imports..."
 
     $tests = @(
-        @{ Name = "PyTorch"; Command = "import torch; print(torch.__version__)" }
-        @{ Name = "CUDA"; Command = "import torch; print(torch.cuda.is_available())" }
-        @{ Name = "FastAPI"; Command = "import fastapi; print(fastapi.__version__)" }
-        @{ Name = "Diffusers"; Command = "import diffusers; print(diffusers.__version__)" }
+        @{ Name = "PyTorch"; Command = 'import torch; print(torch.__version__)' }
+        @{ Name = "CUDA"; Command = 'import torch; print(torch.cuda.is_available())' }
+        @{ Name = "FastAPI"; Command = 'import fastapi; print(fastapi.__version__)' }
+        @{ Name = "Diffusers"; Command = 'import diffusers; print(diffusers.__version__)' }
     )
 
     $allPassed = $true
@@ -607,10 +607,10 @@ Invoke-Step "Installation Test" {
         $result = python -c $test.Command 2>&1
 
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  $($Colors.Green)✓$($Colors.Reset) $($test.Name): $result"
+            Write-Host "  $($Colors.Green)[OK]$($Colors.Reset) $($test.Name): $result"
         }
         else {
-            Write-Host "  $($Colors.Red)✗$($Colors.Reset) $($test.Name): FAILED"
+            Write-Host "  $($Colors.Red)[FAIL]$($Colors.Reset) $($test.Name): FAILED"
             $allPassed = $false
         }
     }
@@ -665,7 +665,7 @@ Invoke-Step "Installation Test" {
 # === Installation Complete ===
 Write-Host ""
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "$($Colors.Green)✓ Installation Complete!$($Colors.Reset)" -ForegroundColor Green
+Write-Host "$($Colors.Green)[OK] Installation Complete!$($Colors.Reset)" -ForegroundColor Green
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 
@@ -673,7 +673,7 @@ Write-Host "$($Colors.Blue)Installation Summary:$($Colors.Reset)"
 Write-Host ""
 
 foreach ($key in $script:InstallationState.Keys) {
-    $status = if ($script:InstallationState[$key]) { "$($Colors.Green)✓$($Colors.Reset)" } else { "$($Colors.Yellow)⊘$($Colors.Reset)" }
+    $status = if ($script:InstallationState[$key]) { "$($Colors.Green)[OK]$($Colors.Reset)" } else { "$($Colors.Yellow)[--]$($Colors.Reset)" }
     $label = $key -replace "([A-Z])", ' $1'
     Write-Host "  $status $label"
 }
