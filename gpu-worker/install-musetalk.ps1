@@ -16,6 +16,45 @@ Write-Host "[>] MuseTalk Installation" -ForegroundColor Cyan
 Write-Host "============================================================"
 Write-Host ""
 
+# CRITICAL: Check if server is running
+Write-ColorMsg "[!] IMPORTANT: Server must be stopped before installation" Yellow
+Write-Host ""
+
+$serverRunning = $false
+
+# Check Windows Service
+$service = Get-Service -Name "AvatarFactoryGPU" -ErrorAction SilentlyContinue
+if ($service -and $service.Status -eq 'Running') {
+    Write-Host "[i] GPU Worker Windows Service is running"
+    $serverRunning = $true
+}
+
+# Check for python.exe process running server.py
+$pythonProcs = Get-Process python -ErrorAction SilentlyContinue | Where-Object {
+    $_.CommandLine -like "*server.py*"
+}
+if ($pythonProcs) {
+    Write-Host "[i] GPU Worker python process is running"
+    $serverRunning = $true
+}
+
+if ($serverRunning) {
+    Write-ColorMsg "[ERROR] Server is still running!" Red
+    Write-Host ""
+    Write-Host "Please stop the server first:"
+    Write-Host "  1. Run: stop.bat"
+    Write-Host "  2. Or: net stop AvatarFactoryGPU (if service)"
+    Write-Host "  3. Wait 5 seconds"
+    Write-Host "  4. Run this script again"
+    Write-Host ""
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
+
+Write-ColorMsg "[OK] Server is not running" Green
+Write-Host ""
+
 # Check venv
 $venvPython = "venv\Scripts\python.exe"
 if (-not (Test-Path $venvPython)) {
