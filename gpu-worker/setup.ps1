@@ -512,36 +512,68 @@ $step7_5 = Invoke-Step "xformers Installation" {
     }
     
     Write-Info "Installing xformers (memory-efficient attention)..."
-    Write-Info "This requires PyTorch and may take a few minutes..."
+    Write-WarningMsg "This may take 5-10 minutes or fail - xformers is optional"
     
-    # Try to install xformers (flexible version for compatibility)
+    if (-not $Silent) {
+        Write-Host ""
+        Write-Host "  $($Colors.Yellow)Note:$($Colors.Reset) If this hangs for >10 minutes, press Ctrl+C"
+        Write-Host "  xformers speeds up Stable Diffusion but is not required"
+        Write-Host ""
+        $proceed = Read-Host "  Install xformers? (y/N)"
+        
+        if ($proceed -notmatch "^[Yy]$") {
+            Write-Info "Skipping xformers installation"
+            return
+        }
+    }
+    
+    # Try to install xformers with timeout
     $xformersArgs = @(
         "-m", "pip",
         "install",
         "xformers",
         "--index-url",
-        "https://download.pytorch.org/whl/cu118"
+        "https://download.pytorch.org/whl/cu118",
+        "--no-build-isolation"  # Faster, uses pre-built wheels
     )
     
     if ($Silent) {
         $xformersArgs += "--quiet"
     }
-    else {
-        Write-Host "  Installing xformers..."
-        Write-Host ""
-    }
     
-    # Show output in real-time
-    & $venvPython @xformersArgs
-    $exitCode = $LASTEXITCODE
+    Write-Info "Attempting xformers installation (may take several minutes)..."
+    Write-Host ""
     
-    if ($exitCode -eq 0) {
-        $installedVersion = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
-        Write-Success "xformers installed: $installedVersion"
+    # Run with job to enable timeout
+    $job = Start-Job -ScriptBlock {
+        param($pythonPath, $args)
+        & $pythonPath @args
+        return $LASTEXITCODE
+    } -ArgumentList $venvPython, $xformersArgs
+    
+    # Wait up to 10 minutes (600 seconds)
+    $timeout = 600
+    $completed = Wait-Job $job -Timeout $timeout
+    
+    if ($completed) {
+        $exitCode = Receive-Job $job
+        Remove-Job $job
+        
+        if ($exitCode -eq 0) {
+            $installedVersion = & $venvPython -c "import xformers; print(xformers.__version__)" 2>$null
+            Write-Success "xformers installed: $installedVersion"
+        }
+        else {
+            Write-WarningMsg "xformers installation failed (this is optional)"
+            Write-Info "Diffusers will work without xformers, but slower"
+        }
     }
     else {
-        Write-WarningMsg "xformers installation failed (this is optional)"
-        Write-Info "Diffusers will work without xformers, but slower"
+        # Timeout - kill the job
+        Stop-Job $job
+        Remove-Job $job
+        Write-WarningMsg "xformers installation timed out after $timeout seconds"
+        Write-Info "Skipping xformers - Diffusers will work without it (slower)"
     }
 }
 # xformers is optional, don't fail if it doesn't install
