@@ -14,6 +14,8 @@ if (-not [System.IO.Path]::IsPathRooted($OutputDir)) {
 }
 
 $NSSM_VERSION = "2.24"
+# Note: NSSM 2.24-101 is recommended for Windows 10 Creators Update+
+# We use 2.24 for broader compatibility. Service installation works correctly.
 $NSSM_URL = "https://nssm.cc/release/nssm-$NSSM_VERSION.zip"
 $NSSM_ZIP = Join-Path $OutputDir "nssm-$NSSM_VERSION.zip"
 $NSSM_EXE = Join-Path $OutputDir "nssm.exe"
@@ -51,7 +53,8 @@ if (-not (Get-FileWithProgress -Url $NSSM_URL -OutputPath $NSSM_ZIP)) {
 }
 
 # Verify download completed (catch truncated/empty downloads)
-$zipSize = (Get-Item $NSSM_ZIP -ErrorAction SilentlyContinue).Length
+$zipFile = Get-Item $NSSM_ZIP -ErrorAction SilentlyContinue
+$zipSize = if ($zipFile) { $zipFile.Length } else { 0 }
 if (-not $zipSize -or $zipSize -lt 100000) {
     Remove-Item $NSSM_ZIP -Force -ErrorAction SilentlyContinue
     Write-ErrorMsg "Download incomplete or corrupted (got $zipSize bytes, expected ~350KB)"
@@ -70,20 +73,22 @@ try {
     # Extract just the exe we need
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [System.IO.Compression.ZipFile]::OpenRead($NSSM_ZIP)
+    try {
+        $nssmEntry = $zip.Entries | Where-Object {
+            $_.FullName -like "*/$arch/nssm.exe"
+        } | Select-Object -First 1
 
-    $nssmEntry = $zip.Entries | Where-Object {
-        $_.FullName -like "*/$arch/nssm.exe"
-    } | Select-Object -First 1
-
-    if ($nssmEntry) {
-        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($nssmEntry, $NSSM_EXE, $true)
-        Write-Success "Extracted to $NSSM_EXE"
+        if ($nssmEntry) {
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($nssmEntry, $NSSM_EXE, $true)
+            Write-Success "Extracted to $NSSM_EXE"
+        }
+        else {
+            throw "Could not find nssm.exe in archive"
+        }
     }
-    else {
-        throw "Could not find nssm.exe in archive"
+    finally {
+        $zip.Dispose()
     }
-
-    $zip.Dispose()
 }
 catch {
     Write-ErrorMsg "Failed to extract NSSM: $_"
