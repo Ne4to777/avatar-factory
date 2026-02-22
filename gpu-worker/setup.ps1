@@ -426,14 +426,32 @@ $step7 = Invoke-Step "Python Dependencies" {
     Write-Info "Verifying installations..."
 
     $packages = @("fastapi", "uvicorn", "diffusers", "transformers")
+    $allOk = $true
+    
     foreach ($package in $packages) {
-        $installed = & $venvPython -c "import $package; print('OK')" 2>$null
-        if ($installed -eq "OK") {
+        # Capture both stdout and stderr
+        $output = & $venvPython -c "import $package; print('OK')" 2>&1
+        $exitCode = $LASTEXITCODE
+        
+        if ($exitCode -eq 0 -and $output -eq "OK") {
             Write-Host "  $($Colors.Green)[OK]$($Colors.Reset) $package"
         }
         else {
-            Write-WarningMsg "  $package import failed"
+            Write-Host "  $($Colors.Red)[FAIL]$($Colors.Reset) $package"
+            $allOk = $false
+            
+            # Show error details
+            if ($output) {
+                Write-Host ""
+                Write-Host "$($Colors.Yellow)Import error for $package`:$($Colors.Reset)"
+                $output | ForEach-Object { Write-Host "  $_" }
+                Write-Host ""
+            }
         }
+    }
+    
+    if (-not $allOk) {
+        throw "Some packages failed to import. Check error details above."
     }
 
     $script:InstallationState.DepsInstalled = $true
