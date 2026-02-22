@@ -27,7 +27,7 @@ $PYTHON_VERSION_MIN = "3.11"
 $PYTHON_VERSION_MAX = "3.11"  # Python 3.11 recommended for best performance and stability
 $CUDA_VERSION_RECOMMENDED = "11.8"
 $PYTORCH_VERSION = "2.7.0"  # Latest stable LTS version (Feb 2026)
-$TORCHVISION_VERSION = "0.19.0"  # Compatible with PyTorch 2.7.0
+$TORCHVISION_VERSION = "0.22.0"  # Compatible with PyTorch 2.7.0
 $TORCHAUDIO_VERSION = "2.7.0"
 
 # Initialize logging
@@ -604,10 +604,14 @@ $step7_5 = Invoke-Step "xformers Installation" {
 # xformers is optional, don't fail if it doesn't install
 # if (-not $step7_5) { exit 1 }
 
-# === STEP 8: Clone and Setup SadTalker ===
-$step8 = Invoke-Step "SadTalker Setup" {
-    Write-Info "Setting up SadTalker..."
-
+# === STEP 8: Skip SadTalker (replaced with MuseTalk) ===
+$step8 = Invoke-Step "Lip-sync Module (Skipped)" {
+    Write-Info "Skipping SadTalker (replaced with MuseTalk in next version)"
+    Write-Success "Lip-sync will be added in future update"
+    return $true
+    
+    # OLD SADTALKER CODE (disabled)
+    <#
     $needsClone = $false
     
     if (Test-Path "SadTalker") {
@@ -729,6 +733,7 @@ $step8 = Invoke-Step "SadTalker Setup" {
     finally {
         Pop-Location
     }
+    #>
 }
 if (-not $step8) { exit 1 }
 

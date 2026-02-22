@@ -41,11 +41,11 @@ realesrgan>=0.3.0
 basicsr>=1.4.2
 facexlib>=0.3.0
 
-# MuseTalk specific dependencies
-mmpose>=1.3.0
-mmdet>=3.3.0
-mmcv>=2.1.0
+# UI (optional)
 gradio>=4.36.0
+
+# MuseTalk dependencies (will be added later in separate step)
+# mmpose, mmdet, mmcv require special installation
 
 # Utilities (latest stable)
 numpy>=1.26.4
