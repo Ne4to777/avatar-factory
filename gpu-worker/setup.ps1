@@ -8,7 +8,9 @@ param(
     [switch]$Force,
     [switch]$AdminOnly,
     [switch]$Repair,
-    [switch]$Uninstall
+    [switch]$Uninstall,
+    [switch]$InstallXformers,
+    [switch]$InstallSadTalker
 )
 
 # Ensure we run from script directory for consistent paths
@@ -397,22 +399,22 @@ $step6 = Invoke-Step "PyTorch Installation" {
         $pipArgs += "--quiet"
     }
     
-    # Execute pip directly without any output redirection
-    Write-Host "  Downloading and installing..."
+    # Execute pip with unbuffered output
+    Write-Host "  Downloading and installing (progress will appear below)..."
     Write-Host ""
     
-    # Build command line
-    $cmdLine = "-m pip install torch==$PYTORCH_VERSION+cu118 torchvision==$TORCHVISION_VERSION+cu118 torchaudio==$TORCHAUDIO_VERSION+cu118 --index-url https://download.pytorch.org/whl/cu118"
-    if ($Silent) { $cmdLine += " --quiet" } else { $cmdLine += " -v" }
+    # Use python -u for unbuffered output, call pip directly
+    $pipCmd = "-u -m pip install torch==$PYTORCH_VERSION+cu118 torchvision==$TORCHVISION_VERSION+cu118 torchaudio==$TORCHAUDIO_VERSION+cu118 --index-url https://download.pytorch.org/whl/cu118"
+    if (-not $Silent) { $pipCmd += " --progress-bar on" }
     
-    # Run with cmd to avoid PowerShell buffering
-    $exitCode = (cmd /c "$venvPython $cmdLine 2>&1 & exit !ERRORLEVEL!")
-    $exitCode = $LASTEXITCODE
+    # Call directly without any wrapping
+    Start-Process -FilePath $venvPython -ArgumentList $pipCmd -NoNewWindow -Wait
     
-    Write-Host ""
-    if ($exitCode -ne 0) {
+    if ($LASTEXITCODE -ne 0) {
         throw "PyTorch installation failed. Check output above for details."
     }
+    
+    Write-Host ""
     
     # Verify versions are compatible
     Write-Info "Verifying PyTorch package versions..."
@@ -478,26 +480,20 @@ $step7 = Invoke-Step "Python Dependencies" {
             Write-Host ""
         }
 
-        $pipArgs = @(
-            "-m", "pip",
-            "install",
-            "-r",
-            "requirements.txt",
-            "--progress-bar", "on"
-        )
-
-        if ($Silent) {
-            $pipArgs += "--quiet"
-        }
-
-        # Show output in real-time
-        & $venvPython @pipArgs
+        Write-Host "  Installing dependencies..."
+        Write-Host ""
+        
+        # Build command line
+        $cmdLine = "-m pip install -r requirements.txt"
+        if ($Silent) { $cmdLine += " --quiet" } else { $cmdLine += " -v" }
+        
+        # Run with cmd to avoid PowerShell buffering
+        cmd /c "$venvPython $cmdLine 2>&1"
         $exitCode = $LASTEXITCODE
 
+        Write-Host ""
         if ($exitCode -ne 0) {
-            Write-Host ""
-            Write-ErrorMsg "Dependencies installation failed with exit code: $exitCode"
-            throw "Failed to install Python dependencies (exit code: $exitCode)"
+            throw "Dependencies installation failed. Check output above for details."
         }
 
         Write-Success "Python dependencies installed"
@@ -561,10 +557,13 @@ $step7_5 = Invoke-Step "xformers Installation" {
         return
     }
     
+    if (-not $InstallXformers) {
+        Write-Info "Skipping xformers (optional - use setup.ps1 -InstallXformers to enable)"
+        return
+    }
+    
     Write-Info "Installing xformers (memory-efficient attention)..."
-    Write-WarningMsg "This may take 5-10 minutes or fail - xformers is optional"
-    Write-Info "Skipping xformers by default (add -InstallXformers flag to enable)"
-    return
+    Write-WarningMsg "This may take 5-10 minutes..."
     
     # Try to install xformers with timeout
     $xformersArgs = @(
@@ -668,20 +667,9 @@ $step8 = Invoke-Step "SadTalker Setup" {
         }
         else {
             Write-Info "Installing SadTalker dependencies..."
-            Write-WarningMsg "SadTalker may have compatibility issues with Python 3.12"
-            
-            if (-not $Silent) {
-                Write-Host ""
-                Write-Host "  $($Colors.Yellow)Note:$($Colors.Reset) SadTalker installation may fail with Python 3.12"
-                Write-Host "  SadTalker is optional - you can install it manually later"
-                Write-Host ""
-                $proceed = Read-Host "  Try to install SadTalker dependencies? (Y/n)"
-                
-                if ($proceed -match "^[Nn]$") {
-                    Write-Info "Skipping SadTalker dependencies"
-                    return
-                }
-            }
+            Write-WarningMsg "SadTalker has known compatibility issues - skipping by default"
+            Write-Info "You can install manually later if needed"
+            return
             
             # Try method 1: with --no-build-isolation (faster, uses system setuptools)
             Write-Info "Attempting installation with --no-build-isolation..."
