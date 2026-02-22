@@ -37,10 +37,18 @@ function Download-WithRetry {
             }
         }
         catch {
-            Write-Host "    [RETRY] Failed: $($_.Exception.Message)"
+            $errorMsg = $_.Exception.Message
+            Write-Host "    [ERROR] $errorMsg"
             
+            # Don't retry on HTTP errors (404, 403, etc) - file doesn't exist
+            if ($errorMsg -match "\(404\)|\(403\)|\(401\)|\(400\)") {
+                Write-Host "    [SKIP] HTTP error - file not available, no retry"
+                return $false
+            }
+            
+            # Retry only on network errors (timeouts, connection drops)
             if ($i -lt $MaxRetries) {
-                Write-Host "    Waiting 5 seconds before retry..."
+                Write-Host "    [RETRY] Network error - retrying in 5 seconds..."
                 Start-Sleep -Seconds 5
                 
                 # Remove partial download
