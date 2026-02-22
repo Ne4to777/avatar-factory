@@ -4,6 +4,7 @@
 param(
     [ValidateSet("Add", "Remove", "Check")]
     [string]$Action = "Add",
+    [ValidateRange(1, 65535)]
     [int]$Port = 8001
 )
 
@@ -14,7 +15,7 @@ $RULE_NAME = "Avatar Factory GPU Worker"
 # Check if running as administrator
 if (-not (Test-Administrator)) {
     Write-ErrorMsg "Firewall configuration requires administrator privileges"
-    Restart-AsAdministrator -Arguments @("-Action", $Action, "-Port", $Port)
+    Restart-AsAdministrator -Arguments @("-Action", $Action, "-Port", $Port) -ScriptPath $MyInvocation.PSCommandPath
     exit
 }
 
@@ -24,7 +25,7 @@ switch ($Action) {
     "Add" {
         Write-Info "Adding firewall rule for port $Port..."
 
-        $existingRule = Get-NetFirewallRule -DisplayName $RULE_NAME -ErrorAction SilentlyContinue
+        $existingRule = Get-NetFirewallRule -DisplayName $RULE_NAME -ErrorAction SilentlyContinue | Select-Object -First 1
 
         if ($existingRule) {
             Write-WarningMsg "Firewall rule already exists"
@@ -61,7 +62,7 @@ switch ($Action) {
     "Remove" {
         Write-Info "Removing firewall rule..."
 
-        $existingRule = Get-NetFirewallRule -DisplayName $RULE_NAME -ErrorAction SilentlyContinue
+        $existingRule = Get-NetFirewallRule -DisplayName $RULE_NAME -ErrorAction SilentlyContinue | Select-Object -First 1
 
         if ($existingRule) {
             try {
@@ -81,7 +82,7 @@ switch ($Action) {
     "Check" {
         Write-Info "Checking firewall rule..."
 
-        $rule = Get-NetFirewallRule -DisplayName $RULE_NAME -ErrorAction SilentlyContinue
+        $rule = Get-NetFirewallRule -DisplayName $RULE_NAME -ErrorAction SilentlyContinue | Select-Object -First 1
 
         if ($rule) {
             Write-Success "Firewall rule exists"
