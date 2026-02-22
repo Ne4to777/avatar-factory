@@ -10,7 +10,7 @@ from pathlib import Path
 
 def check_gpu():
     """Проверка доступности GPU"""
-    print("\n🔍 Checking GPU...")
+    print("\n[i] Checking GPU...")
     
     if not torch.cuda.is_available():
         print("❌ CUDA not available!")
@@ -32,7 +32,7 @@ def check_gpu():
 
 def download_silero_tts():
     """Скачивание Silero TTS"""
-    print("\n📥 1/3 Downloading Silero TTS (Russian)...")
+    print("\n[>>] 1/3 Downloading Silero TTS (Russian)...")
     
     try:
         model, _ = torch.hub.load(
@@ -59,7 +59,7 @@ def download_silero_tts():
 
 def download_stable_diffusion():
     """Скачивание Stable Diffusion XL"""
-    print("\n📥 2/3 Downloading Stable Diffusion XL...")
+    print("\n[>>] 2/3 Downloading Stable Diffusion XL...")
     print("   This will take 10-15 minutes (~7GB)")
     
     try:
@@ -81,7 +81,7 @@ def download_stable_diffusion():
 
 def setup_sadtalker():
     """Настройка SadTalker"""
-    print("\n📥 3/3 Setting up SadTalker...")
+    print("\n[>>] 3/3 Setting up SadTalker...")
     
     sadtalker_dir = Path("SadTalker")
     
@@ -114,7 +114,7 @@ def setup_sadtalker():
 
 def verify_installations():
     """Проверка установки всех компонентов"""
-    print("\n🔍 Verifying installations...")
+    print("\n[i] Verifying installations...")
     
     checks = {
         'torch': False,
@@ -171,7 +171,7 @@ def verify_installations():
 def main():
     """Main function"""
     print("=" * 60)
-    print("🚀 Avatar Factory - Model Downloader")
+    print("[>] Avatar Factory - Model Downloader")
     print("=" * 60)
     
     # 1. Проверка GPU
@@ -183,7 +183,7 @@ def main():
         sys.exit(1)
     
     print("\n" + "=" * 60)
-    print("📦 Downloading models (this may take 20-30 minutes)")
+    print("[*] Downloading models (this may take 20-30 minutes)")
     print("=" * 60)
     
     # 3. Скачивание моделей
@@ -195,7 +195,7 @@ def main():
     
     # 4. Итоги
     print("\n" + "=" * 60)
-    print("📊 Download Summary")
+    print("[==] Download Summary")
     print("=" * 60)
     
     total_size_gb = 0
@@ -218,12 +218,12 @@ def main():
     else:
         print("❌ SadTalker: FAILED (manual setup required)")
     
-    print(f"\n📦 Total downloaded: ~{total_size_gb:.1f}GB")
+    print(f"\n[*] Total downloaded: ~{total_size_gb:.1f}GB")
     
     # 5. Следующие шаги
     if all(results.values()):
         print("\n" + "=" * 60)
-        print("🎉 All models downloaded successfully!")
+        print("[OK] All models downloaded successfully!")
         print("=" * 60)
         print("\nNext steps:")
         print("1. Create .env file:")
