@@ -27,12 +27,12 @@ if ((Test-Path $NSSM_EXE) -and -not $Force) {
     Write-Success "NSSM already downloaded: $NSSM_EXE"
 
     # Verify it works
-    try {
-        $version = & $NSSM_EXE version 2>&1
+    $version = & $NSSM_EXE version 2>&1
+    if ($version -and $version -match "NSSM") {
         Write-Info "Version: $version"
         exit 0
     }
-    catch {
+    else {
         Write-WarningMsg "Existing NSSM appears corrupted, re-downloading..."
     }
 }
@@ -103,13 +103,14 @@ if (-not (Test-Path $NSSM_EXE)) {
     exit 1
 }
 
-# Test execution
-try {
-    $version = & $NSSM_EXE version 2>&1
+# Test execution (nssm version may return non-zero exit code, but that's ok)
+$version = & $NSSM_EXE version 2>&1
+if ($version -and $version -match "NSSM") {
     Write-Success "NSSM verified: $version"
 }
-catch {
-    Write-ErrorMsg "NSSM executable appears corrupted: $_"
+else {
+    Write-ErrorMsg "NSSM executable appears corrupted or invalid"
+    Write-Host "  Output: $version"
     exit 1
 }
 
