@@ -628,26 +628,48 @@ $step8 = Invoke-Step "SadTalker Setup" {
         }
         else {
             Write-Info "Installing SadTalker dependencies..."
+            Write-WarningMsg "SadTalker may have compatibility issues with Python 3.12"
             
-            # First, upgrade setuptools to fix Python 3.12 compatibility
-            Write-Info "Upgrading setuptools for Python 3.12 compatibility..."
-            $setuptoolsArgs = @("-m", "pip", "install", "--upgrade", "setuptools>=65.0", "wheel")
-            if ($Silent) { $setuptoolsArgs += "--quiet" }
-            & $venvPythonPath @setuptoolsArgs
-            
-            if ($LASTEXITCODE -ne 0) {
-                Write-WarningMsg "setuptools upgrade failed, continuing anyway..."
+            if (-not $Silent) {
+                Write-Host ""
+                Write-Host "  $($Colors.Yellow)Note:$($Colors.Reset) SadTalker installation may fail with Python 3.12"
+                Write-Host "  SadTalker is optional - you can install it manually later"
+                Write-Host ""
+                $proceed = Read-Host "  Try to install SadTalker dependencies? (Y/n)"
+                
+                if ($proceed -match "^[Nn]$") {
+                    Write-Info "Skipping SadTalker dependencies"
+                    return
+                }
             }
             
-            # Now install SadTalker requirements
-            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
+            # Try method 1: with --no-build-isolation (faster, uses system setuptools)
+            Write-Info "Attempting installation with --no-build-isolation..."
+            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt", "--no-build-isolation")
             if ($Silent) { $sadPipArgs += "--quiet" }
             else {
                 Write-Host "  This may take a few minutes..."
                 Write-Host ""
             }
             
-            # Show output in real-time
+            & $venvPythonPath @sadPipArgs
+            $exitCode = $LASTEXITCODE
+
+            if ($exitCode -eq 0) {
+                Write-Success "SadTalker dependencies installed"
+                return
+            }
+            
+            # Method 1 failed, try method 2: upgrade pip and setuptools first
+            Write-WarningMsg "First attempt failed, upgrading build tools..."
+            $upgradeArgs = @("-m", "pip", "install", "--upgrade", "pip", "setuptools>=68.0", "wheel")
+            & $venvPythonPath @upgradeArgs | Out-Null
+            
+            # Try again without --no-build-isolation
+            Write-Info "Retrying installation..."
+            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
+            if ($Silent) { $sadPipArgs += "--quiet" }
+            
             & $venvPythonPath @sadPipArgs
             $exitCode = $LASTEXITCODE
 
@@ -656,8 +678,12 @@ $step8 = Invoke-Step "SadTalker Setup" {
             }
             else {
                 Write-Host ""
-                Write-ErrorMsg "SadTalker dependencies installation failed"
-                throw "Failed to install SadTalker dependencies (exit code: $exitCode)"
+                Write-WarningMsg "SadTalker dependencies installation failed"
+                Write-Info "This is not critical - you can install SadTalker manually later:"
+                Write-Host "  cd SadTalker"
+                Write-Host "  ..\\venv\\Scripts\\python.exe -m pip install -r requirements.txt"
+                Write-Host ""
+                Write-Info "Continuing without SadTalker..."
             }
         }
     }
