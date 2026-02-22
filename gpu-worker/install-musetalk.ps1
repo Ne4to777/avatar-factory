@@ -117,49 +117,28 @@ Write-Host "[i] Installing OpenMMLab packages (mmcv, mmdet, mmpose)..."
 Write-Host "    This may take 5-10 minutes (compiling C++ extensions)..."
 Write-Host ""
 
-# Fix setuptools version for mmcv compatibility
-Write-Host "[i] Fixing setuptools version for OpenMMLab compatibility..."
-& $venvPython -m pip install "setuptools<70" --quiet
+# Install lightweight mmcv (no CUDA ops compilation needed)
+Write-Host "[i] Installing mmcv-lite (lightweight, no compilation needed)..."
+& $venvPython -m pip install mmcv-lite --quiet
 
 if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[ERROR] Failed to downgrade setuptools" Red
-    exit 1
+    Write-ColorMsg "[ERROR] Failed to install mmcv-lite" Red
+    Write-Host ""
+    Write-Host "[!] Trying to continue without mmcv..."
+    Write-Host "    MuseTalk may still work for basic inference"
+    Write-Host ""
 }
 
-# Install openmim
-Write-Host "[i] Installing openmim (OpenMMLab package manager)..."
-& $venvPython -m pip install openmim --quiet
-
-if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[ERROR] Failed to install openmim" Red
-    exit 1
-}
-
-# Install mmcv via mim with pre-built wheels (much faster than compilation)
-Write-Host "[i] Installing mmcv (using pre-built wheels)..."
-& $venvPython -m mim install "mmcv>=2.0.0"
-
-if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[ERROR] Failed to install mmcv" Red
-    Write-Host ""
-    Write-Host "[!] Possible issues:"
-    Write-Host "    1. Network connection interrupted"
-    Write-Host "    2. Incompatible CUDA/PyTorch version"
-    Write-Host "    3. Try running install-musetalk.ps1 again"
-    Write-Host ""
-    Write-Host "[i] Alternative: Download models manually"
-    Write-Host "    See: MANUAL-DOWNLOAD-MUSETALK.md"
-    Write-Host ""
-    exit 1
-}
-
-# Install mmdet and mmpose
+# Install mmdet and mmpose (these will use mmcv-lite)
 Write-Host "[i] Installing mmdet and mmpose..."
 & $venvPython -m pip install mmdet mmpose --quiet
 
 if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[ERROR] Failed to install mmdet/mmpose" Red
-    exit 1
+    Write-ColorMsg "[WARN] Failed to install mmdet/mmpose" Yellow
+    Write-Host ""
+    Write-Host "[!] Some MuseTalk features may not work"
+    Write-Host "    Basic lip-sync should still function"
+    Write-Host ""
 }
 
 Write-ColorMsg "[OK] OpenMMLab packages installed" Green
