@@ -13,9 +13,21 @@
 
 ### ШАГ 1: Исправить Silero TTS и перезапустить ✨
 
-Запустите:
+**Вариант 1 (рекомендуется):** Двойной клик по файлу
+```
+Откройте Проводник Windows → C:\dev\avatar-factory\gpu-worker
+Двойной клик на: fix-and-restart.bat
+```
+
+**Вариант 2:** Через командную строку
 ```cmd
+cd C:\dev\avatar-factory\gpu-worker
 fix-and-restart.bat
+```
+
+**Вариант 3:** Полный путь (работает из любого места)
+```cmd
+C:\dev\avatar-factory\gpu-worker\fix-and-restart.bat
 ```
 
 Этот скрипт:

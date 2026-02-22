@@ -2,16 +2,23 @@
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
+REM Получаем директорию где находится этот скрипт
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
+
 echo.
 echo ============================================================
 echo [^>] Component Testing - Avatar Factory GPU Worker
 echo ============================================================
 echo.
+echo Working directory: %CD%
+echo.
 
-set VENV_PYTHON=venv\Scripts\python.exe
+set "VENV_PYTHON=%SCRIPT_DIR%venv\Scripts\python.exe"
 
 if not exist "%VENV_PYTHON%" (
     echo [ERROR] Virtual environment not found
+    echo   Path: %VENV_PYTHON%
     echo   Run install.bat first
     pause
     exit /b 1
