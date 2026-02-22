@@ -14,8 +14,31 @@ param(
 # Ensure we run from script directory for consistent paths
 $null = Set-Location $PSScriptRoot
 
+# Diagnostic output (will be removed later)
+Write-Host "DEBUG: PSScriptRoot = $PSScriptRoot" -ForegroundColor Yellow
+Write-Host "DEBUG: Current Location = $(Get-Location)" -ForegroundColor Yellow
+$commonPath = Join-Path $PSScriptRoot "lib\common.ps1"
+Write-Host "DEBUG: Looking for common.ps1 at: $commonPath" -ForegroundColor Yellow
+Write-Host "DEBUG: common.ps1 exists? $(Test-Path $commonPath)" -ForegroundColor Yellow
+if (Test-Path "lib") {
+    Write-Host "DEBUG: lib folder exists, contents:" -ForegroundColor Yellow
+    Get-ChildItem "lib" | ForEach-Object { Write-Host "  - $($_.Name)" -ForegroundColor Cyan }
+} else {
+    Write-Host "DEBUG: lib folder does NOT exist!" -ForegroundColor Red
+}
+Write-Host ""
+
 # Import common utilities
-. "$PSScriptRoot\lib\common.ps1"
+$commonScriptPath = Join-Path $PSScriptRoot "lib\common.ps1"
+if (-not (Test-Path $commonScriptPath)) {
+    Write-Host "ERROR: common.ps1 not found at: $commonScriptPath" -ForegroundColor Red
+    Write-Host "Please run: git pull" -ForegroundColor Yellow
+    Write-Host "Press any key to exit..."
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
+
+. $commonScriptPath
 
 # Configuration
 $LOG_FILE = Join-Path $PSScriptRoot "logs\install.log"
