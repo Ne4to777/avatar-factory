@@ -390,15 +390,21 @@ $step6 = Invoke-Step "PyTorch Installation" {
         "torchvision",
         "torchaudio",
         "--index-url",
-        "https://download.pytorch.org/whl/cu118"
+        "https://download.pytorch.org/whl/cu118",
+        "--progress-bar", "on"  # Force progress bar display
     )
     
     if ($Silent) {
         $pipArgs += "--quiet"
     }
     
-    # Show output in real-time (don't capture)
+    # Show output in real-time with flushed output
+    $prevProgressPreference = $ProgressPreference
+    $ProgressPreference = 'SilentlyContinue'
+    
     & $venvPython @pipArgs
+    
+    $ProgressPreference = $prevProgressPreference
     $exitCode = $LASTEXITCODE
     
     if ($exitCode -ne 0) {
@@ -475,7 +481,8 @@ $step7 = Invoke-Step "Python Dependencies" {
             "-m", "pip",
             "install",
             "-r",
-            "requirements.txt"
+            "requirements.txt",
+            "--progress-bar", "on"
         )
 
         if ($Silent) {
@@ -576,7 +583,8 @@ $step7_5 = Invoke-Step "xformers Installation" {
         "xformers",
         "--index-url",
         "https://download.pytorch.org/whl/cu118",
-        "--no-build-isolation"  # Faster, uses pre-built wheels
+        "--no-build-isolation",  # Faster, uses pre-built wheels
+        "--progress-bar", "on"
     )
     
     if ($Silent) {
@@ -687,7 +695,7 @@ $step8 = Invoke-Step "SadTalker Setup" {
             
             # Try method 1: with --no-build-isolation (faster, uses system setuptools)
             Write-Info "Attempting installation with --no-build-isolation..."
-            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt", "--no-build-isolation")
+            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt", "--no-build-isolation", "--progress-bar", "on")
             if ($Silent) { $sadPipArgs += "--quiet" }
             else {
                 Write-Host "  This may take a few minutes..."
