@@ -320,28 +320,8 @@ $step6 = Invoke-Step "PyTorch Installation" {
     
     if ($torchInstalled -and -not $Force) {
         Write-Success "PyTorch already installed: $torchInstalled"
+        Write-Info "CUDA support will be verified in tests (Step 12)"
         $script:InstallationState.TorchInstalled = $true
-        
-        # Optional: Try to check CUDA (with timeout protection)
-        Write-Info "Verifying CUDA support (this may take a moment)..."
-        $job = Start-Job -ScriptBlock {
-            param($pythonPath)
-            & $pythonPath -c "import torch; print('CUDA' if torch.cuda.is_available() else 'CPU')" 2>$null
-        } -ArgumentList $venvPython
-        
-        $cudaCheck = Wait-Job $job -Timeout 10 | Receive-Job
-        Remove-Job $job -Force
-        
-        if ($cudaCheck -eq "CUDA") {
-            Write-Success "CUDA support confirmed"
-        }
-        elseif ($cudaCheck -eq "CPU") {
-            Write-WarningMsg "CUDA not available (CPU-only PyTorch)"
-        }
-        else {
-            Write-WarningMsg "CUDA check timed out (will verify during tests)"
-        }
-        
         return
     }
     
