@@ -98,9 +98,9 @@ $models = @(
     },
     @{
         Name = "GFPGAN v1.3"
-        Url = "https://huggingface.co/camenduru/SadTalker/resolve/main/new/gfpgan/weights/GFPGANv1.3.pth"
+        Url = "https://huggingface.co/alexgenovese/facerestore/resolve/main/GFPGANv1.3.pth"
         Path = "SadTalker\gfpgan\weights\GFPGANv1.3.pth"
-        Size = "~332MB"
+        Size = "~349MB"
     }
 )
 
