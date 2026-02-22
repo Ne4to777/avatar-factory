@@ -117,21 +117,40 @@ Write-Host "[i] Installing OpenMMLab packages (mmcv, mmdet, mmpose)..."
 Write-Host "    This may take 5-10 minutes (compiling C++ extensions)..."
 Write-Host ""
 
-# Install mmcv-full (required by mmpose and mmdet)
-& $venvPython -m pip install openmim
-& $venvPython -m mim install mmcv
-
-# Install mmdet and mmpose
-& $venvPython -m pip install mmdet mmpose
+# Install openmim first
+Write-Host "[i] Installing openmim..."
+& $venvPython -m pip install openmim --quiet
 
 if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[ERROR] Failed to install OpenMMLab packages" Red
+    Write-ColorMsg "[ERROR] Failed to install openmim" Red
+    exit 1
+}
+
+# Install mmcv via mim (this will install openxlab as dependency)
+Write-Host "[i] Installing mmcv (with C++ compilation)..."
+& $venvPython -m mim install mmcv
+
+if ($LASTEXITCODE -ne 0) {
+    Write-ColorMsg "[ERROR] Failed to install mmcv" Red
     Write-Host ""
     Write-Host "[!] Common fixes:"
     Write-Host "    1. Make sure Visual Studio Build Tools are installed"
     Write-Host "    2. Restart PowerShell and try again"
     Write-Host "    3. Check: https://mmcv.readthedocs.io/en/latest/get_started/installation.html"
     Write-Host ""
+    exit 1
+}
+
+# Fix dependency conflicts with openxlab (required by OpenMMLab)
+Write-Host "[i] Fixing openxlab dependency conflicts..."
+& $venvPython -m pip install --upgrade openxlab --quiet
+
+# Install mmdet and mmpose
+Write-Host "[i] Installing mmdet and mmpose..."
+& $venvPython -m pip install mmdet mmpose --quiet
+
+if ($LASTEXITCODE -ne 0) {
+    Write-ColorMsg "[ERROR] Failed to install mmdet/mmpose" Red
     exit 1
 }
 
