@@ -232,6 +232,225 @@ $step4 = Invoke-Step "CUDA Check" {
 }
 if (-not $step4) { exit 1 }
 
+# === STEP 5: Create Virtual Environment ===
+$step5 = Invoke-Step "Python Virtual Environment" {
+    Write-Info "Setting up Python virtual environment..."
+
+    if ((Test-Path $VENV_PATH) -and $Force) {
+        Write-WarningMsg "Removing existing virtual environment..."
+        Remove-Item -Path $VENV_PATH -Recurse -Force
+    }
+
+    if (-not (Test-Path $VENV_PATH)) {
+        Write-Info "Creating virtual environment..."
+        python -m venv $VENV_PATH
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to create virtual environment"
+        }
+
+        Write-Success "Virtual environment created"
+    }
+    else {
+        Write-Success "Virtual environment already exists"
+    }
+
+    # Activate venv
+    Write-Info "Activating virtual environment..."
+    $activateScript = Join-Path $VENV_PATH "Scripts\Activate.ps1"
+
+    if (Test-Path $activateScript) {
+        & $activateScript
+        Write-Success "Virtual environment activated"
+    }
+    else {
+        throw "Virtual environment activation script not found"
+    }
+
+    # Upgrade pip
+    Write-Info "Upgrading pip..."
+    $pipUpgradeArgs = @("install", "--upgrade", "pip", "setuptools", "wheel")
+    if ($Silent) { $pipUpgradeArgs += "--quiet" }
+    & python -m pip @pipUpgradeArgs
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "pip upgraded"
+    }
+
+    $script:InstallationState.VenvCreated = $true
+}
+if (-not $step5) { exit 1 }
+
+# === STEP 6: Install PyTorch with CUDA ===
+$step6 = Invoke-Step "PyTorch Installation" {
+    Write-Info "Installing PyTorch with CUDA support..."
+    if (-not $Silent) {
+        Write-Host "  This may take 5-10 minutes depending on your internet speed..."
+        Write-Host ""
+    }
+
+    # Check if already installed
+    $torchInstalled = python -c "import torch; print(torch.__version__)" 2>$null
+
+    if ($torchInstalled -and -not $Force) {
+        Write-Success "PyTorch already installed: $torchInstalled"
+
+        # Check CUDA availability
+        $cudaAvailable = python -c "import torch; print(torch.cuda.is_available())" 2>$null
+
+        if ($cudaAvailable -eq "True") {
+            Write-Success "CUDA support confirmed"
+            $script:InstallationState.TorchInstalled = $true
+            return
+        }
+        else {
+            Write-WarningMsg "CUDA not available in current PyTorch installation"
+            Write-Info "Reinstalling PyTorch with CUDA..."
+        }
+    }
+
+    # Install PyTorch with CUDA 11.8
+    Write-Info "Installing from PyTorch CUDA index..."
+
+    $pipArgs = @(
+        "install",
+        "torch",
+        "torchvision",
+        "torchaudio",
+        "--index-url",
+        "https://download.pytorch.org/whl/cu118"
+    )
+
+    if ($Silent) {
+        $pipArgs += "--quiet"
+    }
+
+    & python -m pip @pipArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install PyTorch"
+    }
+
+    # Verify installation
+    $cudaAvailable = python -c "import torch; print(torch.cuda.is_available())" 2>&1
+
+    if ($cudaAvailable -eq "True") {
+        $torchVersion = python -c "import torch; print(torch.__version__)" 2>&1
+        Write-Success "PyTorch installed with CUDA support: $torchVersion"
+
+        # Show GPU info
+        $gpuName = python -c "import torch; print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')" 2>&1
+        Write-Info "GPU: $gpuName"
+
+        $script:InstallationState.TorchInstalled = $true
+    }
+    else {
+        Write-WarningMsg "PyTorch installed but CUDA not available"
+        Write-WarningMsg "GPU acceleration will not work. Check CUDA Toolkit installation."
+    }
+}
+if (-not $step6) { exit 1 }
+
+# === STEP 7: Install Python Dependencies ===
+$step7 = Invoke-Step "Python Dependencies" {
+    Write-Info "Installing Python dependencies from requirements.txt..."
+    if (-not $Silent) {
+        Write-Host "  This may take 3-5 minutes..."
+        Write-Host ""
+    }
+
+    if (-not (Test-Path "requirements.txt")) {
+        throw "requirements.txt not found"
+    }
+
+    $pipArgs = @(
+        "install",
+        "-r",
+        "requirements.txt"
+    )
+
+    if ($Silent) {
+        $pipArgs += "--quiet"
+    }
+
+    & python -m pip @pipArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install Python dependencies"
+    }
+
+    Write-Success "Python dependencies installed"
+
+    # Verify key packages
+    Write-Info "Verifying installations..."
+
+    $packages = @("fastapi", "uvicorn", "diffusers", "transformers")
+    foreach ($package in $packages) {
+        $installed = python -c "import $package; print('OK')" 2>$null
+        if ($installed -eq "OK") {
+            Write-Host "  $($Colors.Green)✓$($Colors.Reset) $package"
+        }
+        else {
+            Write-WarningMsg "  $package import failed"
+        }
+    }
+
+    $script:InstallationState.DepsInstalled = $true
+}
+if (-not $step7) { exit 1 }
+
+# === STEP 8: Clone and Setup SadTalker ===
+$step8 = Invoke-Step "SadTalker Setup" {
+    Write-Info "Setting up SadTalker..."
+
+    if (Test-Path "SadTalker") {
+        if ($Force) {
+            Write-WarningMsg "Removing existing SadTalker..."
+            Remove-Item -Path "SadTalker" -Recurse -Force
+        }
+        else {
+            Write-Success "SadTalker already exists"
+            return
+        }
+    }
+
+    if (-not (Test-Command git)) {
+        Write-WarningMsg "Git not available, skipping SadTalker clone"
+        Write-Info "You'll need to manually clone: git clone https://github.com/OpenTalker/SadTalker.git"
+        return
+    }
+
+    Write-Info "Cloning SadTalker repository..."
+    git clone https://github.com/OpenTalker/SadTalker.git
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to clone SadTalker"
+    }
+
+    Write-Success "SadTalker cloned"
+
+    # Install SadTalker dependencies
+    Write-Info "Installing SadTalker dependencies..."
+
+    Push-Location "SadTalker"
+
+    if (Test-Path "requirements.txt") {
+        $sadPipArgs = @("install", "-r", "requirements.txt")
+        if ($Silent) { $sadPipArgs += "--quiet" }
+        python -m pip @sadPipArgs
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "SadTalker dependencies installed"
+        }
+        else {
+            Write-WarningMsg "Some SadTalker dependencies failed to install"
+        }
+    }
+
+    Pop-Location
+}
+if (-not $step8) { exit 1 }
+
 # More steps will be added in next task...
 
 Write-Success "Setup completed!"
