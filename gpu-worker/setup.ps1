@@ -94,8 +94,34 @@ function Invoke-Step {
         return $true
     }
     catch {
-        Write-ErrorMsg "Step failed: $_"
+        # Display full error details
+        Write-Host ""
+        Write-ErrorMsg "Step failed with error:"
+        Write-Host "$($Colors.Red)$_$($Colors.Reset)"
+        
+        # Show exception details if available
+        if ($_.Exception) {
+            Write-Host ""
+            Write-Host "$($Colors.Yellow)Exception Type:$($Colors.Reset) $($_.Exception.GetType().FullName)"
+            if ($_.Exception.Message -ne $_) {
+                Write-Host "$($Colors.Yellow)Exception Message:$($Colors.Reset) $($_.Exception.Message)"
+            }
+        }
+        
+        # Show script stack trace
+        if ($_.ScriptStackTrace) {
+            Write-Host ""
+            Write-Host "$($Colors.Yellow)Stack Trace:$($Colors.Reset)"
+            Write-Host "$($_.ScriptStackTrace)"
+        }
+        
+        Write-Host ""
+        
+        # Log full error
         Write-Log "Step failed: $_" -LogPath $LOG_FILE
+        Write-Log "Exception: $($_.Exception.GetType().FullName) - $($_.Exception.Message)" -LogPath $LOG_FILE
+        Write-Log "Stack: $($_.ScriptStackTrace)" -LogPath $LOG_FILE
+        
         return $false
     }
 }
@@ -340,10 +366,23 @@ $step6 = Invoke-Step "PyTorch Installation" {
         $pipArgs += "--quiet"
     }
     
-    & $venvPython @pipArgs
+    # Capture output and errors
+    $output = & $venvPython @pipArgs 2>&1
+    $exitCode = $LASTEXITCODE
     
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to install PyTorch"
+    # Show output in non-silent mode
+    if (-not $Silent) {
+        $output | ForEach-Object { Write-Host $_ }
+    }
+    
+    if ($exitCode -ne 0) {
+        Write-Host ""
+        Write-ErrorMsg "PyTorch installation failed with exit code: $exitCode"
+        Write-Host ""
+        Write-Host "$($Colors.Yellow)Last 20 lines of output:$($Colors.Reset)"
+        $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
+        Write-Host ""
+        throw "Failed to install PyTorch (exit code: $exitCode)"
     }
     
     # Quick verify (just check it imports)
@@ -382,10 +421,23 @@ $step7 = Invoke-Step "Python Dependencies" {
         $pipArgs += "--quiet"
     }
 
-    & $venvPython @pipArgs
+    # Capture output and errors
+    $output = & $venvPython @pipArgs 2>&1
+    $exitCode = $LASTEXITCODE
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to install Python dependencies"
+    # Show output in non-silent mode
+    if (-not $Silent) {
+        $output | ForEach-Object { Write-Host $_ }
+    }
+
+    if ($exitCode -ne 0) {
+        Write-Host ""
+        Write-ErrorMsg "Dependencies installation failed with exit code: $exitCode"
+        Write-Host ""
+        Write-Host "$($Colors.Yellow)Last 30 lines of output:$($Colors.Reset)"
+        $output | Select-Object -Last 30 | ForEach-Object { Write-Host "  $_" }
+        Write-Host ""
+        throw "Failed to install Python dependencies (exit code: $exitCode)"
     }
 
     Write-Success "Python dependencies installed"
@@ -428,14 +480,28 @@ $step7_5 = Invoke-Step "xformers Installation" {
         $xformersArgs += "--quiet"
     }
     
-    & $venvPython @xformersArgs
+    # Capture output and errors
+    $output = & $venvPython @xformersArgs 2>&1
+    $exitCode = $LASTEXITCODE
     
-    if ($LASTEXITCODE -eq 0) {
+    # Show output in non-silent mode
+    if (-not $Silent) {
+        $output | ForEach-Object { Write-Host $_ }
+    }
+    
+    if ($exitCode -eq 0) {
         Write-Success "xformers installed successfully"
     }
     else {
         Write-WarningMsg "xformers installation failed (this is optional)"
         Write-Info "Diffusers will work without xformers, but slower"
+        
+        if (-not $Silent) {
+            Write-Host ""
+            Write-Host "$($Colors.Yellow)Error details (last 10 lines):$($Colors.Reset)"
+            $output | Select-Object -Last 10 | ForEach-Object { Write-Host "  $_" }
+            Write-Host ""
+        }
     }
 }
 # xformers is optional, don't fail if it doesn't install
