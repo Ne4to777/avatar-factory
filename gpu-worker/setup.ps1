@@ -98,30 +98,23 @@ function Invoke-Step {
         return $true
     }
     catch {
-        # Display full error details
+        # Display ONLY the actual error message, not PowerShell internals
         Write-Host ""
-        Write-ErrorMsg "Step failed with error:"
-        Write-Host "$($Colors.Red)$_$($Colors.Reset)"
+        Write-ErrorMsg "Step failed:"
+        Write-Host ""
         
-        # Show exception details if available
-        if ($_.Exception) {
-            Write-Host ""
-            Write-Host "$($Colors.Yellow)Exception Type:$($Colors.Reset) $($_.Exception.GetType().FullName)"
-            if ($_.Exception.Message -ne $_) {
-                Write-Host "$($Colors.Yellow)Exception Message:$($Colors.Reset) $($_.Exception.Message)"
-            }
+        # Extract and show the actual error message
+        $errorMessage = $_.Exception.Message
+        if ($errorMessage) {
+            Write-Host "  $errorMessage"
         }
-        
-        # Show script stack trace
-        if ($_.ScriptStackTrace) {
-            Write-Host ""
-            Write-Host "$($Colors.Yellow)Stack Trace:$($Colors.Reset)"
-            Write-Host "$($_.ScriptStackTrace)"
+        else {
+            Write-Host "  $_"
         }
         
         Write-Host ""
         
-        # Log full error
+        # Log full details to file (not console)
         Write-Log "Step failed: $_" -LogPath $LOG_FILE
         Write-Log "Exception: $($_.Exception.GetType().FullName) - $($_.Exception.Message)" -LogPath $LOG_FILE
         Write-Log "Stack: $($_.ScriptStackTrace)" -LogPath $LOG_FILE
@@ -385,35 +378,40 @@ $step6 = Invoke-Step "PyTorch Installation" {
     }
     
     # Install PyTorch with specific stable versions to ensure compatibility
-    # Using PyTorch 2.1.2 (LTS) for better compatibility with AI libraries
+    # Using PyTorch 2.1.2 (LTS) - tested and stable with AI libraries
+    Write-Info "Installing PyTorch $PYTORCH_VERSION with CUDA 11.8..."
+    
     $pipArgs = @(
         "-m", "pip",
         "install",
-        "torch==2.1.2+cu118",
-        "torchvision==0.16.2+cu118",
-        "torchaudio==2.1.2+cu118",
+        "torch==$PYTORCH_VERSION+cu118",
+        "torchvision==$TORCHVISION_VERSION+cu118",
+        "torchaudio==$TORCHAUDIO_VERSION+cu118",
         "--index-url",
         "https://download.pytorch.org/whl/cu118",
-        "--progress-bar", "on"  # Force progress bar display
+        "--progress-bar", "on",
+        "--no-cache-dir"  # Force fresh download
     )
     
     if ($Silent) {
         $pipArgs += "--quiet"
     }
     
-    # Show output in real-time with flushed output
-    $prevProgressPreference = $ProgressPreference
-    $ProgressPreference = 'SilentlyContinue'
+    # Execute pip directly without any output redirection
+    Write-Host "  Downloading and installing..."
+    Write-Host ""
     
-    & $venvPython @pipArgs
+    # Build command line
+    $cmdLine = "-m pip install torch==$PYTORCH_VERSION+cu118 torchvision==$TORCHVISION_VERSION+cu118 torchaudio==$TORCHAUDIO_VERSION+cu118 --index-url https://download.pytorch.org/whl/cu118"
+    if ($Silent) { $cmdLine += " --quiet" } else { $cmdLine += " -v" }
     
-    $ProgressPreference = $prevProgressPreference
+    # Run with cmd to avoid PowerShell buffering
+    $exitCode = (cmd /c "$venvPython $cmdLine 2>&1 & exit !ERRORLEVEL!")
     $exitCode = $LASTEXITCODE
     
+    Write-Host ""
     if ($exitCode -ne 0) {
-        Write-Host ""
-        Write-ErrorMsg "PyTorch installation failed with exit code: $exitCode"
-        throw "Failed to install PyTorch (exit code: $exitCode)"
+        throw "PyTorch installation failed. Check output above for details."
     }
     
     # Verify versions are compatible
@@ -565,19 +563,8 @@ $step7_5 = Invoke-Step "xformers Installation" {
     
     Write-Info "Installing xformers (memory-efficient attention)..."
     Write-WarningMsg "This may take 5-10 minutes or fail - xformers is optional"
-    
-    if (-not $Silent) {
-        Write-Host ""
-        Write-Host "  $($Colors.Yellow)Note:$($Colors.Reset) If this hangs for >10 minutes, press Ctrl+C"
-        Write-Host "  xformers speeds up Stable Diffusion but is not required"
-        Write-Host ""
-        $proceed = Read-Host "  Install xformers? (y/N)"
-        
-        if ($proceed -notmatch "^[Yy]$") {
-            Write-Info "Skipping xformers installation"
-            return
-        }
-    }
+    Write-Info "Skipping xformers by default (add -InstallXformers flag to enable)"
+    return
     
     # Try to install xformers with timeout
     $xformersArgs = @(
