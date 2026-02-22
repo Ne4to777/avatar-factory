@@ -10,7 +10,7 @@ Check the permissions.
 
 ---
 
-## ✅ Решение (3 команды)
+## ✅ Решение (4 команды)
 
 ### 1️⃣ Остановите сервер
 ```cmd
@@ -20,15 +20,22 @@ stop.bat
 
 Подождите **5 секунд** чтобы все процессы завершились.
 
-### 2️⃣ Pull обновленный код
+### 2️⃣ Обновите код
 ```cmd
 git pull
 ```
 
-Обновленный `install-musetalk.ps1` теперь автоматически проверяет что сервер остановлен.
+Что изменилось:
+- ✅ Исправлена ошибка PowerShell "Could not load module 'venv'"
+- ✅ `install-musetalk.ps1` автоматически проверяет что сервер остановлен
+- ✅ Удалены все упоминания устаревших модулей
 
-### 3️⃣ Установите MuseTalk
-```powershell
+### 3️⃣ Перезапустите PowerShell
+Закройте и откройте PowerShell заново (или cmd), чтобы избежать проблем с кешированием переменных.
+
+### 4️⃣ Установите MuseTalk
+```cmd
+cd C:\dev\avatar-factory\gpu-worker
 powershell -ExecutionPolicy Bypass -File install-musetalk.ps1
 ```
 
