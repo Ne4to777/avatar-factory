@@ -4,31 +4,25 @@ REM Stops server whether running as Windows Service or manual process
 
 setlocal EnableDelayedExpansion
 
-set "GREEN=[92m"
-set "YELLOW=[93m"
-set "RED=[91m"
-set "BLUE=[94m"
-set "NC=[0m"
-
-reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
-
 cd /d "%~dp0"
 
 echo.
-echo %BLUE%Avatar Factory GPU Worker - Stopping...%NC%
+echo ========================================
+echo  Avatar Factory GPU Worker - Stopping
+echo ========================================
 echo.
 
 REM Check if running as Windows Service
 sc query AvatarFactoryGPU >nul 2>&1
 if %errorLevel% equ 0 (
-    sc query AvatarFactoryGPU | findstr "RUNNING" >nul 2>&1
-    if !errorLevel! equ 0 (
-        echo %BLUE%Stopping Windows Service...%NC%
+    sc query AvatarFactoryGPU | findstr /C:"STATE" | findstr /C:"RUNNING" >nul 2>&1
+    if %errorLevel% equ 0 (
+        echo [i] Stopping Windows Service...
         net stop AvatarFactoryGPU
         if !errorLevel! equ 0 (
-            echo %GREEN%Service stopped successfully.%NC%
+            echo [OK] Service stopped successfully
         ) else (
-            echo %RED%Failed to stop service. Run as Administrator.%NC%
+            echo [ERROR] Failed to stop service. Run as Administrator
             echo   Try: net stop AvatarFactoryGPU
         )
         echo.
@@ -46,15 +40,15 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8001" ^| findstr "LISTENING
 :found_pid
 
 if not defined PID (
-    echo %GREEN%No GPU server process found on port 8001.%NC%
-    echo %GREEN%Server is not running.%NC%
+    echo [OK] No GPU server process found on port 8001
+    echo [OK] Server is not running
     echo.
     pause
     exit /b 0
 )
 
 REM Try graceful shutdown first (sends WM_CLOSE)
-echo %BLUE%Stopping process (PID !PID!)...%NC%
+echo [i] Stopping process (PID !PID!)...
 taskkill /PID !PID! /T >nul 2>&1
 
 REM Wait briefly
@@ -63,7 +57,7 @@ timeout /t 2 /nobreak >nul
 REM Verify stopped; force kill if still running
 netstat -ano | findstr ":8001" | findstr "LISTENING" >nul 2>&1
 if !errorLevel! equ 0 (
-    echo %YELLOW%Process still running, forcing...%NC%
+    echo [!] Process still running, forcing...
     taskkill /PID !PID! /F /T >nul 2>&1
     timeout /t 1 /nobreak >nul
 )
@@ -71,9 +65,9 @@ if !errorLevel! equ 0 (
 REM Final verification
 netstat -ano | findstr ":8001" | findstr "LISTENING" >nul 2>&1
 if !errorLevel! equ 0 (
-    echo %RED%Warning: Process may still be running. Try: taskkill /PID !PID! /F%NC%
+    echo [ERROR] Warning: Process may still be running. Try: taskkill /PID !PID! /F
 ) else (
-    echo %GREEN%GPU server stopped successfully.%NC%
+    echo [OK] GPU server stopped successfully
 )
 
 echo.
