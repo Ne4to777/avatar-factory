@@ -543,9 +543,9 @@ LOG_LEVEL=INFO
 
     Set-Content -Path $envFile -Value $envContent -Encoding UTF8
 
+    # Make file hidden (not read-only - user may need to edit)
     $file = Get-Item $envFile
     $file.Attributes = $file.Attributes -bor [System.IO.FileAttributes]::Hidden
-    $file.IsReadOnly = $true
 
     Write-Success ".env file created"
     Write-Host ""
@@ -647,6 +647,13 @@ Invoke-Step "Installation Test" {
             finally {
                 Stop-Job $serverJob -ErrorAction SilentlyContinue
                 Remove-Job $serverJob -ErrorAction SilentlyContinue
+
+                # Kill any python server process we started on port 8001
+                $serverProc = Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue |
+                    Select-Object -First 1 -ExpandProperty OwningProcess
+                if ($serverProc) {
+                    Stop-Process -Id $serverProc -Force -ErrorAction SilentlyContinue
+                }
             }
         }
         else {
@@ -673,6 +680,8 @@ foreach ($key in $script:InstallationState.Keys) {
 
 Write-Host ""
 Write-Host "$($Colors.Blue)Next Steps:$($Colors.Reset)"
+Write-Host ""
+Write-Host "  $($Colors.Yellow)Note: .env is hidden$($Colors.Reset) (view/edit: Get-Content .env)"
 Write-Host ""
 Write-Host "  1. Find your PC's IP address:"
 Write-Host "     $($Colors.Cyan)ipconfig$($Colors.Reset) (look for IPv4 Address)"
