@@ -507,49 +507,73 @@ $step7_5 = Invoke-Step "xformers Installation" {
 $step8 = Invoke-Step "SadTalker Setup" {
     Write-Info "Setting up SadTalker..."
 
+    $needsClone = $false
+    
     if (Test-Path "SadTalker") {
         if ($Force) {
             Write-WarningMsg "Removing existing SadTalker..."
             Remove-Item -Path "SadTalker" -Recurse -Force
+            $needsClone = $true
         }
         else {
-            Write-Success "SadTalker already exists"
-            return
+            Write-Success "SadTalker directory already exists"
         }
     }
-
-    if (-not (Test-Command git)) {
-        Write-WarningMsg "Git not available, skipping SadTalker clone"
-        Write-Info "You'll need to manually clone: git clone https://github.com/OpenTalker/SadTalker.git"
-        return
+    else {
+        $needsClone = $true
     }
 
-    Write-Info "Cloning SadTalker repository..."
-    git clone https://github.com/OpenTalker/SadTalker.git
+    if ($needsClone) {
+        if (-not (Test-Command git)) {
+            Write-WarningMsg "Git not available, skipping SadTalker clone"
+            Write-Info "You'll need to manually clone: git clone https://github.com/OpenTalker/SadTalker.git"
+            return
+        }
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to clone SadTalker"
+        Write-Info "Cloning SadTalker repository..."
+        git clone https://github.com/OpenTalker/SadTalker.git
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to clone SadTalker"
+        }
+
+        Write-Success "SadTalker cloned"
     }
 
-    Write-Success "SadTalker cloned"
-
-    # Install SadTalker dependencies
+    # Install/Update SadTalker dependencies (always run, even if already cloned)
     Write-Info "Installing SadTalker dependencies..."
 
     Push-Location "SadTalker"
     try {
         if (Test-Path "requirements.txt") {
-            $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+            $venvPython = Join-Path (Resolve-Path "..") $VENV_PATH "Scripts\python.exe"
+            
+            # Capture output for better error reporting
             $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
             if ($Silent) { $sadPipArgs += "--quiet" }
-            & $venvPython @sadPipArgs
+            
+            $output = & $venvPython @sadPipArgs 2>&1
+            $exitCode = $LASTEXITCODE
+            
+            if (-not $Silent) {
+                $output | ForEach-Object { Write-Host $_ }
+            }
 
-            if ($LASTEXITCODE -eq 0) {
+            if ($exitCode -eq 0) {
                 Write-Success "SadTalker dependencies installed"
             }
             else {
-                Write-WarningMsg "Some SadTalker dependencies failed to install"
+                Write-Host ""
+                Write-ErrorMsg "SadTalker dependencies installation failed"
+                Write-Host ""
+                Write-Host "$($Colors.Yellow)Last 20 lines of output:$($Colors.Reset)"
+                $output | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
+                Write-Host ""
+                throw "Failed to install SadTalker dependencies (exit code: $exitCode)"
             }
+        }
+        else {
+            Write-WarningMsg "SadTalker requirements.txt not found"
         }
     }
     finally {
