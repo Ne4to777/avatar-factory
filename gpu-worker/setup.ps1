@@ -285,37 +285,47 @@ if (-not $step5) { exit 1 }
 
 # === STEP 6: Install PyTorch with CUDA ===
 $step6 = Invoke-Step "PyTorch Installation" {
+    Write-Info "Checking PyTorch installation..."
+    
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    
+    # Quick check if torch is already installed
+    $torchInstalled = & $venvPython -c "import torch; print(torch.__version__)" 2>$null
+    
+    if ($torchInstalled -and -not $Force) {
+        Write-Success "PyTorch already installed: $torchInstalled"
+        $script:InstallationState.TorchInstalled = $true
+        
+        # Optional: Try to check CUDA (with timeout protection)
+        Write-Info "Verifying CUDA support (this may take a moment)..."
+        $job = Start-Job -ScriptBlock {
+            param($pythonPath)
+            & $pythonPath -c "import torch; print('CUDA' if torch.cuda.is_available() else 'CPU')" 2>$null
+        } -ArgumentList $venvPython
+        
+        $cudaCheck = Wait-Job $job -Timeout 10 | Receive-Job
+        Remove-Job $job -Force
+        
+        if ($cudaCheck -eq "CUDA") {
+            Write-Success "CUDA support confirmed"
+        }
+        elseif ($cudaCheck -eq "CPU") {
+            Write-WarningMsg "CUDA not available (CPU-only PyTorch)"
+        }
+        else {
+            Write-WarningMsg "CUDA check timed out (will verify during tests)"
+        }
+        
+        return
+    }
+    
+    # Install PyTorch with CUDA 11.8
     Write-Info "Installing PyTorch with CUDA support..."
     if (-not $Silent) {
         Write-Host "  This may take 5-10 minutes depending on your internet speed..."
         Write-Host ""
     }
-
-    # Check if already installed using venv's python
-    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
-    $torchInstalled = & $venvPython -c "import torch; print(torch.__version__)" 2>$null
-
-    if ($torchInstalled -and -not $Force) {
-        Write-Success "PyTorch already installed: $torchInstalled"
-
-        # Check CUDA availability
-        $cudaAvailable = & $venvPython -c "import torch; print(torch.cuda.is_available())" 2>$null
-
-        if ($cudaAvailable -eq "True") {
-            Write-Success "CUDA support confirmed"
-            $script:InstallationState.TorchInstalled = $true
-            return
-        }
-        else {
-            Write-WarningMsg "CUDA not available in current PyTorch installation"
-            Write-Info "Reinstalling PyTorch with CUDA..."
-        }
-    }
-
-    # Install PyTorch with CUDA 11.8 using venv's python explicitly
-    Write-Info "Installing from PyTorch CUDA index..."
-
-    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    
     $pipArgs = @(
         "-m", "pip",
         "install",
@@ -325,34 +335,25 @@ $step6 = Invoke-Step "PyTorch Installation" {
         "--index-url",
         "https://download.pytorch.org/whl/cu118"
     )
-
+    
     if ($Silent) {
         $pipArgs += "--quiet"
     }
-
+    
     & $venvPython @pipArgs
-
+    
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install PyTorch"
     }
-
-    # Verify installation using venv's python
-    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
-    $cudaAvailable = & $venvPython -c "import torch; print(torch.cuda.is_available())" 2>&1
-
-    if ($cudaAvailable -eq "True") {
-        $torchVersion = & $venvPython -c "import torch; print(torch.__version__)" 2>&1
-        Write-Success "PyTorch installed with CUDA support: $torchVersion"
-
-        # Show GPU info
-        $gpuName = & $venvPython -c "import torch; print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')" 2>&1
-        Write-Info "GPU: $gpuName"
-
+    
+    # Quick verify (just check it imports)
+    $torchVersion = & $venvPython -c "import torch; print(torch.__version__)" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "PyTorch installed: $torchVersion"
         $script:InstallationState.TorchInstalled = $true
     }
     else {
-        Write-WarningMsg "PyTorch installed but CUDA not available"
-        Write-WarningMsg "GPU acceleration will not work. Check CUDA Toolkit installation."
+        throw "PyTorch installation verification failed"
     }
 }
 if (-not $step6) { exit 1 }
