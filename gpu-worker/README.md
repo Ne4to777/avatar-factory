@@ -141,6 +141,8 @@ powershell -ExecutionPolicy Bypass -File install-musetalk.ps1
 
 **Важно:** MuseTalk устанавливается отдельно, так как его зависимости (mmcv, mmpose) требуют компиляции C++ кода и могут конфликтовать с основными зависимостями. Установка через `install-musetalk.ps1` гарантирует совместимость.
 
+**Альтернатива:** Если автоматическая загрузка не работает, можно скачать модели вручную. Смотрите [MANUAL-DOWNLOAD-MUSETALK.md](MANUAL-DOWNLOAD-MUSETALK.md).
+
 Проверить установку:
 
 ```cmd

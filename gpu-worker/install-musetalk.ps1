@@ -225,9 +225,10 @@ except Exception as e:
     } else {
         Write-ColorMsg "[ERROR] Model download failed (exit code: $exitCode)" Red
         Write-Host ""
-        Write-Host "[i] You can download manually:"
-        Write-Host "    1. Visit: https://huggingface.co/TMElyralab/MuseTalk"
-        Write-Host "    2. Download all files to: MuseTalk\models\"
+        Write-Host "[!] Download failed. You can:"
+        Write-Host "    1. Try again (script supports resume)"
+        Write-Host "    2. Download manually - see: MANUAL-DOWNLOAD-MUSETALK.md"
+        Write-Host "    3. Visit: https://huggingface.co/TMElyralab/MuseTalk"
         Write-Host ""
     }
 }

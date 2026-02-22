@@ -103,6 +103,20 @@ curl http://localhost:8001/health
 
 ---
 
+## 📥 Альтернатива: Ручная загрузка моделей
+
+Если автоматическая загрузка не работает или очень медленная, можно скачать модели вручную:
+
+**Смотрите подробную инструкцию:** [MANUAL-DOWNLOAD-MUSETALK.md](MANUAL-DOWNLOAD-MUSETALK.md)
+
+**Краткая версия:**
+1. Откройте: https://huggingface.co/TMElyralab/MuseTalk
+2. Скачайте все файлы (~2GB)
+3. Поместите в `C:\dev\avatar-factory\gpu-worker\MuseTalk\models\`
+4. Запустите `start.bat`
+
+---
+
 ## 🐛 Если всё ещё ошибка "Access Denied"
 
 ### Вариант 1: Жесткая остановка
