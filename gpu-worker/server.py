@@ -9,6 +9,10 @@ from pathlib import Path
 import logging
 
 # Setup detailed logging FIRST
+# Ensure logs directory exists
+log_dir = Path('logs')
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
