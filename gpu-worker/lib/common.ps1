@@ -4,7 +4,7 @@
 
 # Enable strict mode
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 
 # ANSI color codes for Windows 10+ (PowerShell 5.1 compatible)
 $script:ESC = [char]27
@@ -86,8 +86,8 @@ function Restart-AsAdministrator {
     )
 
     if (-not (Test-Administrator)) {
-        Write-WarningMsg "This operation requires administrator privileges"
-        Write-Info "Restarting with elevation..."
+        Write-WarningMsg 'This operation requires administrator privileges'
+        Write-Info 'Restarting with elevation...'
 
         Start-Process powershell.exe -ArgumentList "-ExecutionPolicy Bypass -File `"$ScriptPath`" $($Arguments -join ' ')" -Verb RunAs
         exit
@@ -113,7 +113,7 @@ function Get-WindowsVersion {
 
 # Check disk space (in GB)
 function Get-FreeDiskSpace {
-    param([string]$Drive = "C:")
+    param([string]$Drive = 'C:')
     $disk = Get-PSDrive -Name $Drive.Trim(':') -ErrorAction SilentlyContinue
     if ($disk) {
         return [math]::Round($disk.Free / 1GB, 2)
@@ -145,7 +145,7 @@ function Get-LocalIPAddress {
     if ($adapters) {
         return $adapters[0].IPAddress
     }
-    return "localhost"
+    return 'localhost'
 }
 
 # Test internet connectivity
@@ -194,11 +194,11 @@ function Get-FileWithProgress {
         Unregister-Event -SourceIdentifier WebClient.DownloadProgressChanged -ErrorAction SilentlyContinue
         $webClient.Dispose()
 
-        Write-Progress -Activity "Downloading" -Completed
+        Write-Progress -Activity 'Downloading' -Completed
         return $true
     }
     catch {
-        Write-Progress -Activity "Downloading" -Completed
+        Write-Progress -Activity 'Downloading' -Completed
         return $false
     }
 }
