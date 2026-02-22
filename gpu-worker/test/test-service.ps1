@@ -98,7 +98,28 @@ Test-Case "Service starts correctly" {
     catch { return $false }
 } -WindowsOnly
 
-# Test 5: Service uninstall script exists and is valid
+# Test 5: Service stops correctly (if service is installed and running)
+Test-Case "Service stops correctly" {
+    if (-not $IsWin) { return $false }
+    try {
+        $svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+        if (-not $svc -or $svc.Status -ne "Running") {
+            Write-Host "  (Service not running - skip)" -ForegroundColor Gray
+            return $true
+        }
+        Stop-Service -Name $ServiceName -Force -ErrorAction Stop
+        Start-Sleep -Seconds 2
+        $svc = Get-Service -Name $ServiceName
+        $stopped = $svc.Status -ne "Running"
+        if ($stopped) {
+            Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
+        }
+        return $stopped
+    }
+    catch { return $false }
+} -WindowsOnly
+
+# Test 6: Service uninstall script exists and is valid
 Test-Case "Service uninstallation script" {
     $uninstall = Join-Path $RootDir "service-uninstall.ps1"
     if (-not (Test-Path $uninstall)) { return $false }
@@ -106,7 +127,7 @@ Test-Case "Service uninstallation script" {
     return $content -match $ServiceName -and $content -match "Stop-Service|remove"
 }
 
-# Test 6: NSSM download script exists
+# Test 7: NSSM download script exists
 Test-Case "NSSM download script" {
     return Test-Path (Join-Path $RootDir "download-nssm.ps1")
 }

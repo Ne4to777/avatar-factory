@@ -19,7 +19,7 @@ Test suite for Avatar Factory GPU Worker automation scripts.
 
 ## Running Tests
 
-From `gpu-worker` directory:
+**From project root (e.g. avatar-factory):**
 
 ```powershell
 cd gpu-worker/test
@@ -28,7 +28,16 @@ powershell -ExecutionPolicy Bypass -File test-service.ps1
 powershell -ExecutionPolicy Bypass -File test-server.ps1
 ```
 
-Or run all:
+**Or from gpu-worker directory:**
+
+```powershell
+cd test
+powershell -ExecutionPolicy Bypass -File test-install.ps1
+powershell -ExecutionPolicy Bypass -File test-service.ps1
+powershell -ExecutionPolicy Bypass -File test-server.ps1
+```
+
+**Run all at once:**
 
 ```powershell
 Get-ChildItem test\*.ps1 | ForEach-Object { & powershell -ExecutionPolicy Bypass -File $_.FullName }

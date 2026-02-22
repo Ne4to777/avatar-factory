@@ -89,7 +89,7 @@ Test-Case "Health endpoint responds" {
         $r = Invoke-WebRequest -Uri "$BaseUrl/health" -UseBasicParsing -TimeoutSec 5
         $j = $r.Content | ConvertFrom-Json
         Write-Host "  Status: $($j.status)" -ForegroundColor Gray
-        return $r.StatusCode -eq 200 -and $j.status
+        return $r.StatusCode -eq 200 -and $j.status -eq "healthy"
     }
     catch { return $false }
 }
