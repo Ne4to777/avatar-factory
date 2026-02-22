@@ -53,11 +53,15 @@ RUN pip install --no-cache-dir -e .
 # Copy application code
 COPY . .
 
-# Setup SadTalker
-RUN if [ ! -d "SadTalker" ]; then \
-    git clone https://github.com/OpenTalker/SadTalker.git && \
-    cd SadTalker && \
-    pip install --no-cache-dir -r requirements.txt; \
+# Setup MuseTalk
+RUN if [ ! -d "MuseTalk" ]; then \
+    git clone https://github.com/TMElyralab/MuseTalk.git && \
+    pip install --no-cache-dir -r musetalk-requirements.txt && \
+    pip install --no-cache-dir \
+        git+https://github.com/TMElyralab/MMCM.git@main \
+        git+https://github.com/TMElyralab/controlnet_aux.git@tme \
+        git+https://github.com/tencent-ailab/IP-Adapter.git@main \
+        git+https://github.com/openai/CLIP.git@main; \
     fi
 
 # Download models (optional - can be done at runtime)

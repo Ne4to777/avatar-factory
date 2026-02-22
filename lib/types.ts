@@ -66,7 +66,7 @@ export interface GPUHealthCheck {
     utilization_percent: number;
   };
   models: {
-    sadtalker: boolean;
+    musetalk: boolean;
     stable_diffusion: boolean;
     silero_tts: boolean;
   };

@@ -22,7 +22,7 @@ help:
 	@echo "  make install          - Full installation"
 	@echo "  make install-deps     - Install Python dependencies"
 	@echo "  make install-models   - Download AI models"
-	@echo "  make setup-sadtalker  - Setup SadTalker"
+	@echo "  make setup-musetalk   - Setup MuseTalk"
 	@echo ""
 	@echo "$(GREEN)Run:$(NC)"
 	@echo "  make start            - Start GPU server"
@@ -40,7 +40,7 @@ help:
 	@echo "  make gpu-info         - Show GPU information"
 
 # 🎯 Полная установка
-install: check-deps setup-venv install-pytorch install-deps setup-sadtalker create-env
+install: check-deps setup-venv install-pytorch install-deps setup-musetalk create-env
 	@echo -e "$(GREEN)✓ Installation complete!$(NC)"
 	@echo ""
 	@echo -e "$(BLUE)Next steps:$(NC)"
@@ -79,16 +79,17 @@ install-deps:
 	@$(PIP) install -r requirements.txt
 	@echo -e "$(GREEN)✓ Dependencies installed$(NC)"
 
-# 🎭 Настройка SadTalker
-setup-sadtalker:
-	@echo -e "$(BLUE)Setting up SadTalker...$(NC)"
-	@if [ ! -d "SadTalker" ]; then \
-		git clone https://github.com/OpenTalker/SadTalker.git; \
-		cd SadTalker && $(PIP) install -r requirements.txt; \
-		echo -e "$(GREEN)✓ SadTalker installed$(NC)"; \
-	else \
-		echo -e "$(GREEN)✓ SadTalker exists$(NC)"; \
-	fi
+# 🎭 Настройка MuseTalk
+setup-musetalk:
+	@echo -e "$(BLUE)Setting up MuseTalk...$(NC)"
+	@echo -e "$(YELLOW)MuseTalk requires separate installation:$(NC)"
+	@echo ""
+	@echo "  For Windows:"
+	@echo "  powershell -ExecutionPolicy Bypass -File install-musetalk.ps1"
+	@echo ""
+	@echo "  For Linux/macOS:"
+	@echo "  bash install-musetalk.sh  (to be created)"
+	@echo ""
 
 # 📥 Скачивание AI моделей
 install-models:
@@ -152,7 +153,7 @@ gpu-info:
 clean:
 	@echo -e "$(BLUE)Cleaning temporary files...$(NC)"
 	rm -rf /tmp/avatar-factory/*
-	rm -rf /tmp/sadtalker_output/*
+	rm -rf temp/*
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	@echo -e "$(GREEN)✓ Cleaned$(NC)"

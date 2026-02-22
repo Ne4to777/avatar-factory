@@ -37,7 +37,7 @@
 
 | Location | Type | Notes |
 |----------|------|-------|
-| `sadtalker_inference.py` | TODO/placeholder | Application logic, outside automation scope |
+| `musetalk_inference.py` | Implementation | MuseTalk lip-sync wrapper |
 | `uninstall.ps1` | Missing file | `setup.ps1 -Uninstall` expects it; will error if used |
 
 ### 1.4 Integration Gaps
@@ -55,7 +55,7 @@
 | 3 | Service scripts integrate with NSSM | ✅ | service-install calls download-nssm.ps1; NSSM install, set, start used correctly |
 | 4 | Batch files pass arguments correctly | ✅ | install.bat passes `%*` to setup.ps1; start/stop use `%~dp0` |
 | 5 | Documentation matches implementation | ✅ | README describes install.bat, setup flow, service, troubleshooting |
-| 6 | .gitignore covers generated files | ✅ | venv/, tools/, logs/*.log, .env, models/, checkpoints/, SadTalker/ |
+| 6 | .gitignore covers generated files | ✅ | venv/, tools/, logs/*.log, .env, models/, checkpoints/, MuseTalk/ |
 | 7 | Logs directory structure correct | ✅ | logs/install.log, logs/service.log, logs/service-error.log; created as needed |
 | 8 | No hardcoded paths that should be relative | ⚠️ | `server.py` uses `Path("/tmp/avatar-factory")` — Unix-only; consider `tempfile.gettempdir()` for Windows |
 
@@ -79,7 +79,7 @@ Step 4: CUDA check (nvidia-smi, nvcc)
 Step 5: venv create, activate, pip upgrade
 Step 6: PyTorch + CUDA install
 Step 7: pip install -r requirements.txt
-Step 8: git clone SadTalker, pip install SadTalker deps
+Step 8: MuseTalk setup message
 Step 9: download_models.py (if not -SkipModels)
 Step 10: .env creation (New-SecureRandomString, Get-LocalIPAddress)
 Step 11: configure-firewall.ps1 -Action Add
@@ -185,7 +185,7 @@ Start-Service AvatarFactoryGPU
 | 2 | setup.ps1 skeleton, params | ✅ |
 | 3 | check-system.ps1 | ✅ |
 | 4 | Python, Git, CUDA steps | ✅ |
-| 5 | Venv, PyTorch, deps, SadTalker | ✅ |
+| 5 | Venv, PyTorch, deps, MuseTalk | ✅ |
 | 6 | Models download, .env | ✅ |
 | 7 | Firewall, final test step | ✅ |
 | 8 | NSSM download, service scripts | ✅ |

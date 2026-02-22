@@ -196,19 +196,15 @@ install_python_deps() {
     print_success "Python dependencies installed"
 }
 
-# Clone SadTalker
-setup_sadtalker() {
-    print_step "Setting up SadTalker..."
-    
-    if [ ! -d "SadTalker" ]; then
-        git clone https://github.com/OpenTalker/SadTalker.git
-        cd SadTalker
-        pip install -r requirements.txt
-        cd ..
-        print_success "SadTalker cloned and installed"
-    else
-        print_success "SadTalker already exists"
-    fi
+# MuseTalk setup message
+setup_musetalk() {
+    print_step "MuseTalk installation..."
+    echo ""
+    echo "  MuseTalk requires separate installation:"
+    echo "  For Windows: powershell -ExecutionPolicy Bypass -File install-musetalk.ps1"
+    echo "  For Linux/macOS: bash install-musetalk.sh (to be created)"
+    echo ""
+    print_info "Continuing without MuseTalk (install manually later)"
 }
 
 # Download AI models
@@ -291,7 +287,7 @@ main() {
     install_python_deps
     echo ""
     
-    setup_sadtalker
+    setup_musetalk
     echo ""
     
     download_models

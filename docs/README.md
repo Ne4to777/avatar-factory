@@ -59,7 +59,7 @@ docs/
 - [Next.js](https://nextjs.org/docs)
 - [Prisma](https://www.prisma.io/docs)
 - [BullMQ](https://docs.bullmq.io/)
-- [SadTalker](https://github.com/OpenTalker/SadTalker)
+- [MuseTalk](https://github.com/TMElyralab/MuseTalk)
 - [Silero Models](https://github.com/snakers4/silero-models)
 
 ---

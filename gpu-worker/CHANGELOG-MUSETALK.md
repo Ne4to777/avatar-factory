@@ -4,7 +4,7 @@
 
 ### Обзор изменений
 
-Интеграция **MuseTalk** для замены SadTalker в Avatar Factory GPU Worker. MuseTalk обеспечивает в 3-4 раза более быструю генерацию lip-sync видео с сопоставимым или лучшим качеством.
+Интеграция **MuseTalk** для lip-sync генерации в Avatar Factory GPU Worker. MuseTalk обеспечивает высокоскоростную генерацию lip-sync видео (в 3-4 раза быстрее предыдущих решений) с отличным качеством.
 
 ---
 
@@ -38,7 +38,7 @@
 ### 3. Интеграция в server.py
 
 **Изменения:**
-- Заменили `sadtalker_model` на `musetalk_model`
+- Добавлен `musetalk_model` для lip-sync генерации
 - Обновили `/health` эндпоинт: `"musetalk": true/false`
 - Обновили `/api/lipsync` для работы с MuseTalk API:
   - Новые параметры: `bbox_shift`, `batch_size`, `fps`
@@ -89,7 +89,7 @@
 - `/api/generate-background` - генерация фона
 - `/api/cleanup` - очистка временных файлов
 
-**Никаких изменений во фронтенд коде не требуется** - MuseTalk использует те же API эндпоинты что и SadTalker.
+**Никаких изменений во фронтенд коде не требуется** - MuseTalk совместим с существующими API эндпоинтами.
 
 ---
 
@@ -106,21 +106,21 @@
 - `CHANGELOG-MUSETALK.md` (этот файл)
 
 ### Изменённые файлы
-- `setup.ps1` - обновление PyTorch, Python version check, disable SadTalker
+- `setup.ps1` - обновление PyTorch, Python version check, добавлен MuseTalk step
 - `requirements.txt` - полный upgrade зависимостей
-- `server.py` - замена SadTalker на MuseTalk
+- `server.py` - интеграция MuseTalk для lip-sync
 - `start.bat` - улучшенная логика запуска с Windows Service
 - `stop.bat` - обновлённая логика остановки
 - `download_models.py` - ASCII замена эмодзи для Windows console
 - `README.md` - полное обновление документации
 
-### Удалённые файлы
-- `download-sadtalker-models.ps1` (obsolete)
-- `sadtalker-requirements-compat.txt` (obsolete)
-- `fix-sadtalker-py312.ps1` (obsolete)
-- `reinstall-with-py310.bat` (obsolete)
-- `check-service.bat` (obsolete)
-- `sadtalker_inference.py` (заменён на musetalk_inference.py)
+### Удалённые файлы (obsolete)
+- `download-sadtalker-models.ps1`
+- `sadtalker-requirements-compat.txt`
+- `sadtalker_inference.py`
+- `fix-sadtalker-py312.ps1`
+- `reinstall-with-py310.bat`
+- `check-service.bat`
 
 ---
 
@@ -158,7 +158,7 @@
    Этот скрипт:
    - Проверит наличие Python 3.11
    - Создаст резервную копию старого venv
-   - Удалит устаревшие SadTalker файлы
+   - Удалит устаревшие файлы lip-sync модулей
    - Создаст новый venv с Python 3.11
    - Установит все обновлённые зависимости
 
@@ -199,13 +199,9 @@
 
 ## ⚡ Производительность
 
-### До (SadTalker)
-- 10 сек видео: ~30-60 сек
-- 30 сек видео: ~90-180 сек
-
-### После (MuseTalk)
-- 10 сек видео: **~10-15 сек** (3-4x быстрее)
-- 30 сек видео: **~30-45 сек** (3-4x быстрее)
+### MuseTalk Производительность
+- 10 сек видео: **~10-15 сек** (в 3-4x быстрее предыдущих решений)
+- 30 сек видео: **~30-45 сек** (в 3-4x быстрее предыдущих решений)
 
 **RTX 4070 Ti, Python 3.11, PyTorch 2.7.0, CUDA 11.8**
 

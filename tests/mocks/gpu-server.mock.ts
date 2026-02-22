@@ -15,7 +15,7 @@ export const mockGPUHealthCheck: GPUHealthCheck = {
     utilization_percent: 33,
   },
   models: {
-    sadtalker: true,
+    musetalk: true,
     stable_diffusion: true,
     silero_tts: true,
   },

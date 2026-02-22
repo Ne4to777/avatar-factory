@@ -17,7 +17,7 @@ echo   - Install Python 3.11 (if needed)
 echo   - Remove old venv
 echo   - Install PyTorch 2.7.0 + CUDA 11.8
 echo   - Install latest AI libraries
-echo   - Setup MuseTalk (instead of SadTalker)
+echo   - Prepare for MuseTalk integration
 echo.
 echo IMPORTANT: This will take 15-30 minutes
 echo.
@@ -65,16 +65,16 @@ if exist "venv" (
     echo.
 )
 
-REM Remove old SadTalker files
+REM Remove obsolete files from previous installations
 if exist "SadTalker" (
-    echo [i] Removing old SadTalker installation...
+    echo [i] Removing obsolete lip-sync module...
     rmdir /s /q SadTalker
-    echo [OK] SadTalker removed
+    echo [OK] Cleaned up
     echo.
 )
 
 if exist "sadtalker_inference.py" (
-    echo [i] Removing old SadTalker wrapper...
+    echo [i] Removing obsolete files...
     del sadtalker_inference.py
 )
 

@@ -63,8 +63,8 @@ chmod +x install.sh
 2. Создаст виртуальное окружение
 3. Установит PyTorch с CUDA
 4. Установит все Python зависимости
-5. Склонирует SadTalker
-6. Предложит скачать AI модели (~10GB, 15-20 минут)
+5. Подготовит окружение для MuseTalk
+6. Предложит скачать AI модели (~8GB, 10-15 минут)
 7. Создаст .env файл с API ключом
 
 ### Запуск:
@@ -385,7 +385,7 @@ npx tsx test-api-full.ts
 
 ### AI Models
 
-- **SadTalker:** https://github.com/OpenTalker/SadTalker
+- **MuseTalk:** https://github.com/TMElyralab/MuseTalk
 - **Silero TTS:** https://github.com/snakers4/silero-models
 - **Stable Diffusion:** https://github.com/Stability-AI/stablediffusion
 

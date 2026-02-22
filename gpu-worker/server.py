@@ -91,7 +91,7 @@ app.add_middleware(
 )
 
 # Global models (загружаются при старте)
-musetalk_model = None  # Replaced sadtalker with MuseTalk
+musetalk_model = None
 sd_pipeline = None
 tts_model = None
 
@@ -129,7 +129,7 @@ async def load_models():
         raise
     
     try:
-        # 1. MuseTalk (lip-sync) - replaces SadTalker
+        # 1. MuseTalk (lip-sync)
         logger.info("="*60)
         logger.info("STEP 2: Loading MuseTalk...")
         logger.info(f"Current directory: {os.getcwd()}")

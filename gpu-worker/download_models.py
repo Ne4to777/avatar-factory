@@ -79,38 +79,28 @@ def download_stable_diffusion():
         print(f"[ERROR] Failed to download Stable Diffusion: {e}")
         return False
 
-def setup_sadtalker():
-    """Настройка SadTalker"""
-    print("\n[>>] 3/3 Setting up SadTalker...")
+def setup_musetalk():
+    """Check MuseTalk installation status"""
+    print("\n[>>] 3/3 Checking MuseTalk...")
     
-    sadtalker_dir = Path("SadTalker")
+    musetalk_dir = Path("MuseTalk")
     
-    if not sadtalker_dir.exists():
-        print("   Cloning SadTalker repository...")
-        os.system("git clone https://github.com/OpenTalker/SadTalker.git")
-    
-    if not sadtalker_dir.exists():
-        print("[ERROR] Failed to clone SadTalker")
+    if musetalk_dir.exists():
+        print("[OK] MuseTalk directory found")
+        
+        # Check for models
+        models_dir = musetalk_dir / "models"
+        if models_dir.exists() and list(models_dir.glob("*.pth")):
+            print("[OK] MuseTalk models found")
+            return True
+        else:
+            print("[!] MuseTalk models not found")
+            print("   Run: powershell -ExecutionPolicy Bypass -File install-musetalk.ps1")
+            return False
+    else:
+        print("[!] MuseTalk not installed")
+        print("   Run: powershell -ExecutionPolicy Bypass -File install-musetalk.ps1")
         return False
-    
-    print("[OK] SadTalker repository cloned")
-    
-    # Проверка checkpoints
-    checkpoints_dir = sadtalker_dir / "checkpoints"
-    
-    if not checkpoints_dir.exists() or not list(checkpoints_dir.glob("*.pth")):
-        print("\n[!] SadTalker checkpoints not found!")
-        print("   Please download manually:")
-        print("   1. Go to: https://github.com/OpenTalker/SadTalker#-quick-start")
-        print("   2. Download checkpoints (~2GB)")
-        print("   3. Extract to: SadTalker/checkpoints/")
-        print("\n   Or run (if on Linux/Mac):")
-        print("   cd SadTalker && bash scripts/download_models.sh")
-        return False
-    
-    print("[OK] SadTalker checkpoints found")
-    print(f"   Size: ~2GB")
-    return True
 
 def verify_installations():
     """Проверка установки всех компонентов"""
@@ -190,7 +180,7 @@ def main():
     results = {
         'silero': download_silero_tts(),
         'stable_diffusion': download_stable_diffusion(),
-        'sadtalker': setup_sadtalker(),
+        'musetalk': setup_musetalk(),
     }
     
     # 4. Итоги
@@ -212,11 +202,12 @@ def main():
     else:
         print("[ERROR] Stable Diffusion XL: FAILED")
     
-    if results['sadtalker']:
-        print("[OK] SadTalker: OK (~2GB)")
+    if results['musetalk']:
+        print("[OK] MuseTalk: OK (~2GB)")
         total_size_gb += 2
     else:
-        print("[ERROR] SadTalker: FAILED (manual setup required)")
+        print("[!] MuseTalk: NOT INSTALLED")
+        print("    Run: powershell -ExecutionPolicy Bypass -File install-musetalk.ps1")
     
     print(f"\n[*] Total downloaded: ~{total_size_gb:.1f}GB")
     

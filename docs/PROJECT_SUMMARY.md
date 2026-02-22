@@ -81,7 +81,7 @@ avatar-factory/
 │        RTX 4070 Ti 12GB VRAM                 │
 │                                              │
 │  Python FastAPI Server:                      │
-│  • SadTalker (lip-sync animation)           │
+│  • MuseTalk (real-time lip-sync)            │
 │  • Silero TTS (Russian voice synthesis)     │
 │  • Stable Diffusion XL (background gen)     │
 │  • Real-ESRGAN (upscaling)                  │
@@ -110,7 +110,7 @@ avatar-factory/
        └─> Скачивает фото из MinIO
            └─> Отправляет фото + аудио на GPU Server
                │
-               └─> Lip-sync: Создает говорящее видео (SadTalker)
+               └─> Lip-sync: Создает говорящее видео (MuseTalk)
                    └─> Возвращает .mp4 файл
 
 4. WORKER (продолжение)
@@ -148,7 +148,7 @@ avatar-factory/
 | Компонент | Технология | Назначение |
 |-----------|------------|------------|
 | **Server** | FastAPI + Uvicorn | REST API |
-| **Lip-sync** | SadTalker | Talking head animation |
+| **Lip-sync** | MuseTalk | Real-time talking head animation |
 | **TTS** | Silero Models | Russian voice synthesis |
 | **Background** | Stable Diffusion XL | Image generation |
 | **Enhancement** | GFPGAN + Real-ESRGAN | Quality improvement |
@@ -245,7 +245,7 @@ GET    /api/health            // Проверка здоровья систем�
 ### GPU Server
 ```typescript
 POST   /api/tts               // Text-to-Speech (Silero)
-POST   /api/lipsync           // Lip-sync animation (SadTalker)
+POST   /api/lipsync           // Lip-sync animation (MuseTalk)
 POST   /api/generate-background // Background generation (SD XL)
 GET    /health                // GPU server health check
 ```
@@ -341,7 +341,7 @@ python server.py
 | Задача | Время | VRAM |
 |--------|-------|------|
 | Silero TTS (10 сек) | 1-2 сек | 0.5GB |
-| SadTalker (10 сек видео) | 30-60 сек | 4-6GB |
+| MuseTalk (10 сек видео) | 10-15 сек | 4-6GB |
 | Stable Diffusion XL | 5-10 сек | 8GB |
 | FFmpeg композитинг | 10-20 сек | CPU |
 | **Итого (15-30 сек видео)** | **60-90 сек** | - |

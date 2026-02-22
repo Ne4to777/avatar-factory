@@ -9,8 +9,7 @@ param(
     [switch]$AdminOnly,
     [switch]$Repair,
     [switch]$Uninstall,
-    [switch]$InstallXformers,
-    [switch]$InstallSadTalker
+    [switch]$InstallXformers
 )
 
 # Ensure we run from script directory for consistent paths
@@ -604,136 +603,15 @@ $step7_5 = Invoke-Step "xformers Installation" {
 # xformers is optional, don't fail if it doesn't install
 # if (-not $step7_5) { exit 1 }
 
-# === STEP 8: Skip SadTalker (replaced with MuseTalk) ===
-$step8 = Invoke-Step "Lip-sync Module (Skipped)" {
-    Write-Info "Skipping SadTalker (replaced with MuseTalk in next version)"
-    Write-Success "Lip-sync will be added in future update"
+# === STEP 8: Lip-sync Module (MuseTalk) ===
+$step8 = Invoke-Step "Lip-sync Module (MuseTalk)" {
+    Write-Info "MuseTalk will be installed separately after basic setup"
+    Write-Host ""
+    Write-Host "  After installation completes, run:"
+    Write-Host "  powershell -ExecutionPolicy Bypass -File install-musetalk.ps1"
+    Write-Host ""
+    Write-Success "Lip-sync module setup ready"
     return $true
-    
-    # OLD SADTALKER CODE (disabled)
-    <#
-    $needsClone = $false
-    
-    if (Test-Path "SadTalker") {
-        if ($Force) {
-            Write-WarningMsg "Removing existing SadTalker..."
-            Remove-Item -Path "SadTalker" -Recurse -Force
-            $needsClone = $true
-        }
-        else {
-            Write-Success "SadTalker directory already exists"
-        }
-    }
-    else {
-        $needsClone = $true
-    }
-
-    if ($needsClone) {
-        if (-not (Test-Command git)) {
-            Write-WarningMsg "Git not available, skipping SadTalker clone"
-            Write-Info "You'll need to manually clone: git clone https://github.com/OpenTalker/SadTalker.git"
-            return
-        }
-
-        Write-Info "Cloning SadTalker repository..."
-        git clone https://github.com/OpenTalker/SadTalker.git
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to clone SadTalker"
-        }
-
-        Write-Success "SadTalker cloned"
-    }
-
-    # Install/Update SadTalker dependencies
-    Write-Info "Checking SadTalker dependencies..."
-    
-    # Get full path to venv python before changing directory
-    $venvPythonPath = Resolve-Path (Join-Path $VENV_PATH "Scripts\python.exe")
-
-    Push-Location "SadTalker"
-    try {
-        if (-not (Test-Path "requirements.txt")) {
-            Write-WarningMsg "SadTalker requirements.txt not found"
-            return
-        }
-        
-        # Check if key SadTalker package (kornia) is installed
-        $korniaInstalled = $false
-        try {
-            $null = & $venvPythonPath -c "import kornia" 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                $korniaInstalled = $true
-            }
-        }
-        catch {
-            $korniaInstalled = $false
-        }
-        
-        if ($korniaInstalled -and -not $Force) {
-            Write-Success "SadTalker dependencies already installed"
-        }
-        else {
-            Write-Info "Installing SadTalker dependencies..."
-            
-            # First install setuptools (fixes pkg_resources error)
-            Write-Info "Installing setuptools first..."
-            & $venvPythonPath -m pip install setuptools wheel --quiet
-            
-            if (-not $InstallSadTalker) {
-                Write-WarningMsg "SadTalker installation skipped (use -InstallSadTalker to enable)"
-                Write-Info "You can install manually: cd SadTalker && ..\venv\Scripts\python.exe -m pip install -r requirements.txt"
-                return
-            }
-            
-            # Try method 1: with --no-build-isolation (faster, uses system setuptools)
-            Write-Info "Attempting installation with --no-build-isolation..."
-            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt", "--no-build-isolation", "--progress-bar", "on")
-            if ($Silent) { $sadPipArgs += "--quiet" }
-            else {
-                Write-Host "  This may take a few minutes..."
-                Write-Host ""
-            }
-            
-            & $venvPythonPath @sadPipArgs
-            $exitCode = $LASTEXITCODE
-
-            if ($exitCode -eq 0) {
-                Write-Success "SadTalker dependencies installed"
-                return
-            }
-            
-            # Method 1 failed, try method 2: upgrade pip and setuptools first
-            Write-WarningMsg "First attempt failed, upgrading build tools..."
-            $upgradeArgs = @("-m", "pip", "install", "--upgrade", "pip", "setuptools>=68.0", "wheel")
-            & $venvPythonPath @upgradeArgs | Out-Null
-            
-            # Try again without --no-build-isolation
-            Write-Info "Retrying installation..."
-            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt", "--progress-bar", "on")
-            if ($Silent) { $sadPipArgs += "--quiet" }
-            
-            & $venvPythonPath @sadPipArgs
-            $exitCode = $LASTEXITCODE
-
-            if ($exitCode -eq 0) {
-                Write-Success "SadTalker dependencies installed"
-            }
-            else {
-                Write-Host ""
-                Write-WarningMsg "SadTalker dependencies installation failed"
-                Write-Info "This is not critical - you can install SadTalker manually later:"
-                Write-Host "  cd SadTalker"
-                Write-Host "  ..\\venv\\Scripts\\python.exe -m pip install -r requirements.txt"
-                Write-Host ""
-                Write-Info "Continuing without SadTalker..."
-            }
-        }
-    }
-    finally {
-        Pop-Location
-    }
-    #>
 }
 if (-not $step8) { exit 1 }
 

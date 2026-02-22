@@ -153,7 +153,7 @@ class GPUServerClient {
   }
   
   /**
-   * Создание говорящего аватара (SadTalker lip-sync)
+   * Создание говорящего аватара (MuseTalk lip-sync)
    */
   async createLipSync(
     imagePath: string,

@@ -64,7 +64,7 @@ prisma/migrations/**/*.sql
 # AI Models (large files)
 gpu-worker/checkpoints/
 gpu-worker/models/
-gpu-worker/SadTalker/checkpoints/
+gpu-worker/MuseTalk/
 *.pt
 *.pth
 *.ckpt

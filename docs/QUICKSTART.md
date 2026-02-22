@@ -7,7 +7,7 @@
 ```
 НОУТБУК (Dev)         СТАЦИОНАРНЫЙ ПК (GPU)
 ├─ Next.js            ├─ Python FastAPI
-├─ PostgreSQL         ├─ SadTalker
+├─ PostgreSQL         ├─ MuseTalk
 ├─ Redis              ├─ Stable Diffusion XL
 ├─ MinIO              └─ Silero TTS
 └─ Worker             
@@ -166,7 +166,7 @@ docker-compose logs -f
                 ↓
 4. Worker → Отправляет на GPU сервер:
             - Генерирует аудио (Silero TTS)
-            - Создает lip-sync видео (SadTalker)
+            - Создает lip-sync видео (MuseTalk)
             - Генерирует фон (Stable Diffusion)
                 ↓
 5. Worker → Композитинг через FFmpeg

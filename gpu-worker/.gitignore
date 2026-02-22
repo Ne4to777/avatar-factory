@@ -23,7 +23,7 @@ __pycache__/
 # AI Models cache
 models/
 checkpoints/
-SadTalker/
+MuseTalk/
 
 # Temporary files
 *.tmp
