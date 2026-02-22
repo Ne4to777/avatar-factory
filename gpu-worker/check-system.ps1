@@ -79,7 +79,7 @@ Test-Requirement `
         if ($Detailed) {
             Write-Host "  Version: $version"
         }
-        return $version.Major -ge 5
+        return ($version.Major -ge 6) -or ($version.Major -eq 5 -and $version.Minor -ge 1)
     } `
     -SuccessMessage "PowerShell 5.1+ detected" `
     -FailureMessage "PowerShell 5.1+ required" `
@@ -114,7 +114,7 @@ Test-Requirement `
     -Required $false
 
 # Check 5: Python
-$pythonInstalled = Test-Requirement `
+$null = Test-Requirement `
     -Name "Python" `
     -Test {
         if (Test-Command python) {
@@ -135,7 +135,7 @@ $pythonInstalled = Test-Requirement `
     -Required $false
 
 # Check 6: Git
-$gitInstalled = Test-Requirement `
+$null = Test-Requirement `
     -Name "Git" `
     -Test {
         if (Test-Command git) {
@@ -152,7 +152,7 @@ $gitInstalled = Test-Requirement `
     -Required $false
 
 # Check 7: NVIDIA GPU
-$gpuDetected = Test-Requirement `
+$null = Test-Requirement `
     -Name "NVIDIA GPU" `
     -Test {
         if (Test-Command nvidia-smi) {
@@ -160,7 +160,7 @@ $gpuDetected = Test-Requirement `
             if ($gpuInfo -and $Detailed) {
                 Write-Host "  GPU: $gpuInfo"
             }
-            return $gpuInfo -ne $null
+            return ($null -ne $gpuInfo) -and ($gpuInfo.ToString().Trim() -ne '')
         }
         return $false
     } `
@@ -169,7 +169,7 @@ $gpuDetected = Test-Requirement `
     -Required $false
 
 # Check 8: CUDA
-$cudaInstalled = Test-Requirement `
+$null = Test-Requirement `
     -Name "CUDA Toolkit" `
     -Test {
         if (Test-Command nvcc) {
@@ -196,7 +196,7 @@ Test-Requirement `
     -Required $false
 
 # Check 10: winget (for auto-install)
-$wingetAvailable = Test-Requirement `
+$null = Test-Requirement `
     -Name "winget Package Manager" `
     -Test {
         return Test-Command winget
