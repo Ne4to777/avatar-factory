@@ -13,7 +13,7 @@ def check_gpu():
     print("\n[i] Checking GPU...")
     
     if not torch.cuda.is_available():
-        print("❌ CUDA not available!")
+        print("[ERROR] CUDA not available!")
         print("   Please install CUDA Toolkit 11.8+")
         print("   https://developer.nvidia.com/cuda-downloads")
         sys.exit(1)
@@ -21,11 +21,11 @@ def check_gpu():
     gpu_name = torch.cuda.get_device_name(0)
     vram = torch.cuda.get_device_properties(0).total_memory / 1e9
     
-    print(f"✅ GPU: {gpu_name}")
-    print(f"✅ VRAM: {vram:.1f}GB")
+    print(f"[OK] GPU: {gpu_name}")
+    print(f"[OK] VRAM: {vram:.1f}GB")
     
     if vram < 8:
-        print("⚠️  Warning: Less than 8GB VRAM may cause issues")
+        print("[!] Warning: Less than 8GB VRAM may cause issues")
         print("   Recommended: 10GB+ for smooth operation")
     
     return True
@@ -50,11 +50,11 @@ def download_silero_tts():
             sample_rate=48000
         )
         
-        print("✅ Silero TTS downloaded and tested")
+        print("[OK] Silero TTS downloaded and tested")
         print(f"   Size: ~100MB")
         return True
     except Exception as e:
-        print(f"❌ Failed to download Silero TTS: {e}")
+        print(f"[ERROR] Failed to download Silero TTS: {e}")
         return False
 
 def download_stable_diffusion():
@@ -72,11 +72,11 @@ def download_stable_diffusion():
             variant="fp16"
         )
         
-        print("✅ Stable Diffusion XL downloaded")
+        print("[OK] Stable Diffusion XL downloaded")
         print(f"   Size: ~7GB")
         return True
     except Exception as e:
-        print(f"❌ Failed to download Stable Diffusion: {e}")
+        print(f"[ERROR] Failed to download Stable Diffusion: {e}")
         return False
 
 def setup_sadtalker():
@@ -90,16 +90,16 @@ def setup_sadtalker():
         os.system("git clone https://github.com/OpenTalker/SadTalker.git")
     
     if not sadtalker_dir.exists():
-        print("❌ Failed to clone SadTalker")
+        print("[ERROR] Failed to clone SadTalker")
         return False
     
-    print("✅ SadTalker repository cloned")
+    print("[OK] SadTalker repository cloned")
     
     # Проверка checkpoints
     checkpoints_dir = sadtalker_dir / "checkpoints"
     
     if not checkpoints_dir.exists() or not list(checkpoints_dir.glob("*.pth")):
-        print("\n⚠️  SadTalker checkpoints not found!")
+        print("\n[!] SadTalker checkpoints not found!")
         print("   Please download manually:")
         print("   1. Go to: https://github.com/OpenTalker/SadTalker#-quick-start")
         print("   2. Download checkpoints (~2GB)")
@@ -108,7 +108,7 @@ def setup_sadtalker():
         print("   cd SadTalker && bash scripts/download_models.sh")
         return False
     
-    print("✅ SadTalker checkpoints found")
+    print("[OK] SadTalker checkpoints found")
     print(f"   Size: ~2GB")
     return True
 
@@ -127,42 +127,42 @@ def verify_installations():
     try:
         import torch
         checks['torch'] = True
-        print("✅ PyTorch")
+        print("[OK] PyTorch")
     except:
-        print("❌ PyTorch not installed")
+        print("[ERROR] PyTorch not installed")
     
     try:
         import diffusers
         checks['diffusers'] = True
-        print("✅ Diffusers")
+        print("[OK] Diffusers")
     except:
-        print("❌ Diffusers not installed")
+        print("[ERROR] Diffusers not installed")
     
     try:
         import transformers
         checks['transformers'] = True
-        print("✅ Transformers")
+        print("[OK] Transformers")
     except:
-        print("❌ Transformers not installed")
+        print("[ERROR] Transformers not installed")
     
     try:
         import soundfile
         checks['soundfile'] = True
-        print("✅ Soundfile")
+        print("[OK] Soundfile")
     except:
-        print("❌ Soundfile not installed")
+        print("[ERROR] Soundfile not installed")
     
     try:
         import cv2
         checks['opencv'] = True
-        print("✅ OpenCV")
+        print("[OK] OpenCV")
     except:
-        print("❌ OpenCV not installed")
+        print("[ERROR] OpenCV not installed")
     
     all_ok = all(checks.values())
     
     if not all_ok:
-        print("\n⚠️  Some dependencies are missing!")
+        print("\n[!] Some dependencies are missing!")
         print("   Run: pip install -r requirements.txt")
         return False
     
@@ -201,22 +201,22 @@ def main():
     total_size_gb = 0
     
     if results['silero']:
-        print("✅ Silero TTS: OK (~0.1GB)")
+        print("[OK] Silero TTS: OK (~0.1GB)")
         total_size_gb += 0.1
     else:
-        print("❌ Silero TTS: FAILED")
+        print("[ERROR] Silero TTS: FAILED")
     
     if results['stable_diffusion']:
-        print("✅ Stable Diffusion XL: OK (~7GB)")
+        print("[OK] Stable Diffusion XL: OK (~7GB)")
         total_size_gb += 7
     else:
-        print("❌ Stable Diffusion XL: FAILED")
+        print("[ERROR] Stable Diffusion XL: FAILED")
     
     if results['sadtalker']:
-        print("✅ SadTalker: OK (~2GB)")
+        print("[OK] SadTalker: OK (~2GB)")
         total_size_gb += 2
     else:
-        print("❌ SadTalker: FAILED (manual setup required)")
+        print("[ERROR] SadTalker: FAILED (manual setup required)")
     
     print(f"\n[*] Total downloaded: ~{total_size_gb:.1f}GB")
     
@@ -234,7 +234,7 @@ def main():
         print("   curl http://localhost:8001/health")
     else:
         print("\n" + "=" * 60)
-        print("⚠️  Some models failed to download")
+        print("[!] Some models failed to download")
         print("=" * 60)
         print("\nPlease check the errors above and try again.")
         print("You may need to download some models manually.")
