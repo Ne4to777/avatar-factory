@@ -17,6 +17,7 @@ echo %GREEN%Avatar Factory GPU Worker - Installer%NC%
 echo.
 
 REM Check if running as administrator
+echo %YELLOW%Checking administrator rights...%NC%
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo %RED%Error: Not running as Administrator%NC%
@@ -33,6 +34,9 @@ if %errorLevel% neq 0 (
     echo.
     pause
     exit /b 1
+) else (
+    echo %GREEN%Administrator rights confirmed.%NC%
+    echo.
 )
 
 REM Run setup.ps1
