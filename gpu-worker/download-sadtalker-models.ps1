@@ -8,11 +8,18 @@ Write-Host "[>] SadTalker Checkpoints Downloader"
 Write-Host "============================================================"
 Write-Host ""
 
-# Create checkpoints directory
+# Create required directories
 $checkpointsDir = "SadTalker\checkpoints"
+$gfpganDir = "SadTalker\gfpgan\weights"
+
 if (-not (Test-Path $checkpointsDir)) {
     Write-Host "[i] Creating checkpoints directory..."
     New-Item -ItemType Directory -Path $checkpointsDir -Force | Out-Null
+}
+
+if (-not (Test-Path $gfpganDir)) {
+    Write-Host "[i] Creating GFPGAN weights directory..."
+    New-Item -ItemType Directory -Path $gfpganDir -Force | Out-Null
 }
 
 # Helper function to download with retry
@@ -62,48 +69,42 @@ function Download-WithRetry {
     return $false
 }
 
-# Model URLs from SadTalker repository
-# Using alternative mirror (HuggingFace) for better reliability
+# Model URLs from HuggingFace mirror (more reliable than GitHub releases)
+# Source: https://huggingface.co/camenduru/SadTalker/tree/main/new/checkpoints
 $models = @(
     @{
-        Name = "SadTalker V0.0.2 (Main Model)"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/mapping_00229-model.pth.tar"
+        Name = "SadTalker V0.0.2 256px (SafeTensors)"
+        Url = "https://huggingface.co/camenduru/SadTalker/resolve/main/new/checkpoints/SadTalker_V0.0.2_256.safetensors"
+        Path = "$checkpointsDir\SadTalker_V0.0.2_256.safetensors"
+        Size = "~156MB"
+    },
+    @{
+        Name = "SadTalker V0.0.2 512px (SafeTensors)"
+        Url = "https://huggingface.co/camenduru/SadTalker/resolve/main/new/checkpoints/SadTalker_V0.0.2_512.safetensors"
+        Path = "$checkpointsDir\SadTalker_V0.0.2_512.safetensors"
+        Size = "~725MB"
+    },
+    @{
+        Name = "Mapping Model 109"
+        Url = "https://huggingface.co/camenduru/SadTalker/resolve/main/new/checkpoints/mapping_00109-model.pth.tar"
+        Path = "$checkpointsDir\mapping_00109-model.pth.tar"
+        Size = "~148MB"
+    },
+    @{
+        Name = "Mapping Model 229"
+        Url = "https://huggingface.co/camenduru/SadTalker/resolve/main/new/checkpoints/mapping_00229-model.pth.tar"
         Path = "$checkpointsDir\mapping_00229-model.pth.tar"
-        Size = "~350MB"
+        Size = "~148MB"
     },
     @{
-        Name = "SadTalker V0.0.2 (Face Renderer)"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/facevid2vid_00189-model.pth.tar"
-        Path = "$checkpointsDir\facevid2vid_00189-model.pth.tar"
-        Size = "~1.5GB"
-    },
-    @{
-        Name = "SadTalker V0.0.2 (Audio2Pose)"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/audio2pose_00140-model.pth"
-        Path = "$checkpointsDir\audio2pose_00140-model.pth"
-        Size = "~50MB"
-    },
-    @{
-        Name = "SadTalker V0.0.2 (Audio2Exp)"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/audio2exp_00300-model.pth"
-        Path = "$checkpointsDir\audio2exp_00300-model.pth"
-        Size = "~17MB"
-    },
-    @{
-        Name = "Face Detection (shape_predictor)"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/shape_predictor_68_face_landmarks.dat"
-        Path = "$checkpointsDir\shape_predictor_68_face_landmarks.dat"
-        Size = "~100MB"
-    },
-    @{
-        Name = "Expression Coefficients"
-        Url = "https://github.com/OpenTalker/SadTalker/releases/download/v0.0.2-rc/epoch_20.pth"
-        Path = "$checkpointsDir\epoch_20.pth"
-        Size = "~100MB"
+        Name = "GFPGAN v1.3"
+        Url = "https://huggingface.co/camenduru/SadTalker/resolve/main/new/gfpgan/weights/GFPGANv1.3.pth"
+        Path = "SadTalker\gfpgan\weights\GFPGANv1.3.pth"
+        Size = "~332MB"
     }
 )
 
-Write-Host "[i] Total download size: ~2.2GB"
+Write-Host "[i] Total download size: ~1.5GB"
 Write-Host "[i] This will take 10-20 minutes depending on your connection"
 Write-Host "[i] Using retry logic (3 attempts per file)"
 Write-Host ""
@@ -157,7 +158,7 @@ if ($failed -eq 0) {
     Write-Host "   .\start.bat"
 } else {
     Write-Host "[!] Some downloads failed. Please try again or download manually from:"
-    Write-Host "https://github.com/OpenTalker/SadTalker/releases/tag/v0.0.2-rc"
+    Write-Host "https://huggingface.co/camenduru/SadTalker/tree/main/new/checkpoints"
 }
 
 Write-Host ""
