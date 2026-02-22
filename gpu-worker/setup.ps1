@@ -403,8 +403,15 @@ $step7 = Invoke-Step "Python Dependencies" {
     
     if (-not $Force) {
         foreach ($pkg in $keyPackages) {
-            $installed = & $venvPython -c "import $pkg" 2>$null
-            if ($LASTEXITCODE -ne 0) {
+            try {
+                $null = & $venvPython -c "import $pkg" 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    $needsInstall = $true
+                    break
+                }
+            }
+            catch {
+                # Package not installed or import failed
                 $needsInstall = $true
                 break
             }
