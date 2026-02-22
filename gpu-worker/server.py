@@ -193,20 +193,20 @@ async def load_models():
                 language='ru',
                 speaker='v3_1_ru'
             )
-            logger.info(f"Model downloaded, type: {type(tts_model)}, is None: {tts_model is None}")
+            logger.info(f"Model downloaded, type: {type(tts_model)}")
             
-            tts_model = tts_model.to("cuda")
-            logger.info(f"Moved to CUDA, type: {type(tts_model)}, is None: {tts_model is None}")
+            # Silero TTS .to() mutates in-place and returns None, don't reassign
+            tts_model.to("cuda")
+            logger.info(f"Moved to CUDA successfully")
             logger.info("Silero TTS ready")
         except Exception as e:
             logger.warning(f"Silero TTS failed to load: {type(e).__name__}: {e}")
             logger.warning("TTS will not be available")
-            logger.warning(f"Full traceback:", exc_info=True)
+            logger.error(f"Full traceback:", exc_info=True)
             tts_model = None
         
         logger.info("="*60)
         logger.info("STARTUP COMPLETE!")
-        logger.info(f"Final check - tts_model type: {type(tts_model)}, is None: {tts_model is None}, bool: {bool(tts_model)}")
         logger.info(f"SadTalker: {'OK' if sadtalker_model else 'DISABLED'}")
         logger.info(f"Stable Diffusion: {'OK' if sd_pipeline else 'DISABLED'}")
         logger.info(f"TTS: {'OK' if tts_model else 'DISABLED'}")

@@ -670,9 +670,16 @@ $step8 = Invoke-Step "SadTalker Setup" {
         }
         else {
             Write-Info "Installing SadTalker dependencies..."
-            Write-WarningMsg "SadTalker has known compatibility issues - skipping by default"
-            Write-Info "You can install manually later if needed"
-            return
+            
+            # First install setuptools (fixes pkg_resources error)
+            Write-Info "Installing setuptools first..."
+            & $venvPythonPath -m pip install setuptools wheel --quiet
+            
+            if (-not $InstallSadTalker) {
+                Write-WarningMsg "SadTalker installation skipped (use -InstallSadTalker to enable)"
+                Write-Info "You can install manually: cd SadTalker && ..\venv\Scripts\python.exe -m pip install -r requirements.txt"
+                return
+            }
             
             # Try method 1: with --no-build-isolation (faster, uses system setuptools)
             Write-Info "Attempting installation with --no-build-isolation..."
