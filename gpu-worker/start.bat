@@ -17,8 +17,9 @@ echo.
 REM Check if Windows Service exists and is running
 sc query AvatarFactoryGPU >nul 2>&1
 if %errorLevel% equ 0 (
-    sc query AvatarFactoryGPU | findstr "RUNNING" >nul 2>&1
-    if !errorLevel! equ 0 (
+    REM Service exists, check if it's actually running
+    sc query AvatarFactoryGPU | findstr /C:"STATE" | findstr /C:"RUNNING" >nul 2>&1
+    if %errorLevel% equ 0 (
         echo [OK] GPU server is already running as Windows Service.
         echo.
         echo [WARNING] Stop service and run manually in this window?
@@ -26,6 +27,7 @@ if %errorLevel% equ 0 (
         echo.
         set /p STOP_SVC="   Stop service and run manually? (y/N): "
         if /i "!STOP_SVC!"=="y" (
+            echo [i] Stopping service...
             net stop AvatarFactoryGPU
             if !errorLevel! neq 0 (
                 echo [ERROR] Failed to stop service. Try: net stop AvatarFactoryGPU (as admin)
@@ -36,11 +38,14 @@ if %errorLevel% equ 0 (
             echo.
         ) else (
             echo.
-            echo Server is running. Use stop.bat or: net stop AvatarFactoryGPU
+            echo [i] Service is running. Use stop.bat or: net stop AvatarFactoryGPU
             echo.
             pause
             exit /b 0
         )
+    ) else (
+        echo [i] Service exists but is stopped. Starting manually...
+        echo.
     )
 )
 
