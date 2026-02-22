@@ -117,8 +117,17 @@ Write-Host "[i] Installing OpenMMLab packages (mmcv, mmdet, mmpose)..."
 Write-Host "    This may take 5-10 minutes (compiling C++ extensions)..."
 Write-Host ""
 
-# Install openmim first
-Write-Host "[i] Installing openmim..."
+# Fix setuptools version for mmcv compatibility
+Write-Host "[i] Fixing setuptools version for OpenMMLab compatibility..."
+& $venvPython -m pip install "setuptools<70" --quiet
+
+if ($LASTEXITCODE -ne 0) {
+    Write-ColorMsg "[ERROR] Failed to downgrade setuptools" Red
+    exit 1
+}
+
+# Install openmim
+Write-Host "[i] Installing openmim (OpenMMLab package manager)..."
 & $venvPython -m pip install openmim --quiet
 
 if ($LASTEXITCODE -ne 0) {
@@ -126,24 +135,23 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Install mmcv via mim (this will install openxlab as dependency)
-Write-Host "[i] Installing mmcv (with C++ compilation)..."
-& $venvPython -m mim install mmcv
+# Install mmcv via mim with pre-built wheels (much faster than compilation)
+Write-Host "[i] Installing mmcv (using pre-built wheels)..."
+& $venvPython -m mim install "mmcv>=2.0.0"
 
 if ($LASTEXITCODE -ne 0) {
     Write-ColorMsg "[ERROR] Failed to install mmcv" Red
     Write-Host ""
-    Write-Host "[!] Common fixes:"
-    Write-Host "    1. Make sure Visual Studio Build Tools are installed"
-    Write-Host "    2. Restart PowerShell and try again"
-    Write-Host "    3. Check: https://mmcv.readthedocs.io/en/latest/get_started/installation.html"
+    Write-Host "[!] Possible issues:"
+    Write-Host "    1. Network connection interrupted"
+    Write-Host "    2. Incompatible CUDA/PyTorch version"
+    Write-Host "    3. Try running install-musetalk.ps1 again"
+    Write-Host ""
+    Write-Host "[i] Alternative: Download models manually"
+    Write-Host "    See: MANUAL-DOWNLOAD-MUSETALK.md"
     Write-Host ""
     exit 1
 }
-
-# Fix dependency conflicts with openxlab (required by OpenMMLab)
-Write-Host "[i] Fixing openxlab dependency conflicts..."
-& $venvPython -m pip install --upgrade openxlab --quiet
 
 # Install mmdet and mmpose
 Write-Host "[i] Installing mmdet and mmpose..."
