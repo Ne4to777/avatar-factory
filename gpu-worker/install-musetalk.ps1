@@ -117,29 +117,11 @@ Write-Host "[i] Installing OpenMMLab packages (mmcv, mmdet, mmpose)..."
 Write-Host "    This may take 5-10 minutes (compiling C++ extensions)..."
 Write-Host ""
 
-# Install lightweight mmcv (no CUDA ops compilation needed)
-Write-Host "[i] Installing mmcv-lite (lightweight, no compilation needed)..."
-& $venvPython -m pip install mmcv-lite --quiet
-
-if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[ERROR] Failed to install mmcv-lite" Red
-    Write-Host ""
-    Write-Host "[!] Trying to continue without mmcv..."
-    Write-Host "    MuseTalk may still work for basic inference"
-    Write-Host ""
-}
-
-# Install mmdet and mmpose (these will use mmcv-lite)
-Write-Host "[i] Installing mmdet and mmpose..."
-& $venvPython -m pip install mmdet mmpose --quiet
-
-if ($LASTEXITCODE -ne 0) {
-    Write-ColorMsg "[WARN] Failed to install mmdet/mmpose" Yellow
-    Write-Host ""
-    Write-Host "[!] Some MuseTalk features may not work"
-    Write-Host "    Basic lip-sync should still function"
-    Write-Host ""
-}
+# Skip OpenMMLab packages - they have complex dependencies and may not be needed
+Write-Host "[i] Skipping OpenMMLab packages (mmcv, mmdet, mmpose)"
+Write-Host "    These are optional for MuseTalk inference"
+Write-Host "    If MuseTalk fails to load, we'll add them back"
+Write-Host ""
 
 Write-ColorMsg "[OK] OpenMMLab packages installed" Green
 Write-Host ""
