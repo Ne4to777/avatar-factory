@@ -268,11 +268,12 @@ $step5 = Invoke-Step "Python Virtual Environment" {
         throw "Virtual environment activation script not found"
     }
 
-    # Upgrade pip
+    # Upgrade pip using venv's python explicitly
     Write-Info "Upgrading pip..."
-    $pipUpgradeArgs = @("install", "--upgrade", "pip", "setuptools", "wheel")
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    $pipUpgradeArgs = @("-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel")
     if ($Silent) { $pipUpgradeArgs += "--quiet" }
-    & python -m pip @pipUpgradeArgs
+    & $venvPython @pipUpgradeArgs
 
     if ($LASTEXITCODE -eq 0) {
         Write-Success "pip upgraded"
@@ -290,14 +291,15 @@ $step6 = Invoke-Step "PyTorch Installation" {
         Write-Host ""
     }
 
-    # Check if already installed
-    $torchInstalled = python -c "import torch; print(torch.__version__)" 2>$null
+    # Check if already installed using venv's python
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    $torchInstalled = & $venvPython -c "import torch; print(torch.__version__)" 2>$null
 
     if ($torchInstalled -and -not $Force) {
         Write-Success "PyTorch already installed: $torchInstalled"
 
         # Check CUDA availability
-        $cudaAvailable = python -c "import torch; print(torch.cuda.is_available())" 2>$null
+        $cudaAvailable = & $venvPython -c "import torch; print(torch.cuda.is_available())" 2>$null
 
         if ($cudaAvailable -eq "True") {
             Write-Success "CUDA support confirmed"
@@ -310,10 +312,12 @@ $step6 = Invoke-Step "PyTorch Installation" {
         }
     }
 
-    # Install PyTorch with CUDA 11.8
+    # Install PyTorch with CUDA 11.8 using venv's python explicitly
     Write-Info "Installing from PyTorch CUDA index..."
 
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
     $pipArgs = @(
+        "-m", "pip",
         "install",
         "torch",
         "torchvision",
@@ -326,21 +330,22 @@ $step6 = Invoke-Step "PyTorch Installation" {
         $pipArgs += "--quiet"
     }
 
-    & python -m pip @pipArgs
+    & $venvPython @pipArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install PyTorch"
     }
 
-    # Verify installation
-    $cudaAvailable = python -c "import torch; print(torch.cuda.is_available())" 2>&1
+    # Verify installation using venv's python
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+    $cudaAvailable = & $venvPython -c "import torch; print(torch.cuda.is_available())" 2>&1
 
     if ($cudaAvailable -eq "True") {
-        $torchVersion = python -c "import torch; print(torch.__version__)" 2>&1
+        $torchVersion = & $venvPython -c "import torch; print(torch.__version__)" 2>&1
         Write-Success "PyTorch installed with CUDA support: $torchVersion"
 
         # Show GPU info
-        $gpuName = python -c "import torch; print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')" 2>&1
+        $gpuName = & $venvPython -c "import torch; print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')" 2>&1
         Write-Info "GPU: $gpuName"
 
         $script:InstallationState.TorchInstalled = $true
@@ -364,7 +369,9 @@ $step7 = Invoke-Step "Python Dependencies" {
         throw "requirements.txt not found"
     }
 
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
     $pipArgs = @(
+        "-m", "pip",
         "install",
         "-r",
         "requirements.txt"
@@ -374,7 +381,7 @@ $step7 = Invoke-Step "Python Dependencies" {
         $pipArgs += "--quiet"
     }
 
-    & python -m pip @pipArgs
+    & $venvPython @pipArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to install Python dependencies"
@@ -387,7 +394,7 @@ $step7 = Invoke-Step "Python Dependencies" {
 
     $packages = @("fastapi", "uvicorn", "diffusers", "transformers")
     foreach ($package in $packages) {
-        $installed = python -c "import $package; print('OK')" 2>$null
+        $installed = & $venvPython -c "import $package; print('OK')" 2>$null
         if ($installed -eq "OK") {
             Write-Host "  $($Colors.Green)[OK]$($Colors.Reset) $package"
         }
@@ -436,9 +443,10 @@ $step8 = Invoke-Step "SadTalker Setup" {
     Push-Location "SadTalker"
     try {
         if (Test-Path "requirements.txt") {
-            $sadPipArgs = @("install", "-r", "requirements.txt")
+            $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
+            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
             if ($Silent) { $sadPipArgs += "--quiet" }
-            python -m pip @sadPipArgs
+            & $venvPython @sadPipArgs
 
             if ($LASTEXITCODE -eq 0) {
                 Write-Success "SadTalker dependencies installed"
@@ -603,9 +611,10 @@ Invoke-Step "Installation Test" {
     )
 
     $allPassed = $true
+    $venvPython = Join-Path $VENV_PATH "Scripts\python.exe"
 
     foreach ($test in $tests) {
-        $result = python -c $test.Command 2>&1
+        $result = & $venvPython -c $test.Command 2>&1
 
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  $($Colors.Green)[OK]$($Colors.Reset) $($test.Name): $result"
