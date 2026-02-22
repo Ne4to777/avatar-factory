@@ -64,11 +64,11 @@ function Write-Step {
 function Write-Banner {
     param([string]$Title)
     Enable-AnsiColors
-    Write-Host ""
-    Write-Host "$($Colors.Blue)╔════════════════════════════════════════════════════════════════╗$($Colors.Reset)"
-    Write-Host "$($Colors.Blue)║$($Colors.Reset)  🚀 $Title$((' ' * (57 - $Title.Length)))$($Colors.Blue)║$($Colors.Reset)"
-    Write-Host "$($Colors.Blue)╚════════════════════════════════════════════════════════════════╝$($Colors.Reset)"
-    Write-Host ""
+    Write-Host ''
+    Write-Host "$($Colors.Blue)+==============================================================+$($Colors.Reset)"
+    Write-Host "$($Colors.Blue)|$($Colors.Reset)  $Title$((' ' * (57 - $Title.Length)))$($Colors.Blue)|$($Colors.Reset)"
+    Write-Host "$($Colors.Blue)+==============================================================+$($Colors.Reset)"
+    Write-Host ''
 }
 
 # Check if running as administrator
@@ -208,7 +208,7 @@ function Test-FileChecksum {
     param(
         [string]$FilePath,
         [string]$ExpectedHash,
-        [string]$Algorithm = "SHA256"
+        [string]$Algorithm = 'SHA256'
     )
 
     if (-not (Test-Path $FilePath)) {
