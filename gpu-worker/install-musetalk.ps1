@@ -137,6 +137,24 @@ if (-not (Test-Path $modelsDir)) {
     New-Item -ItemType Directory -Path $modelsDir -Force | Out-Null
 }
 
+# Load HF_TOKEN from .env if exists (for faster downloads)
+if (Test-Path ".env") {
+    Write-Host "[i] Checking for HF_TOKEN in .env..."
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match "^HF_TOKEN=(.+)$") {
+            $env:HF_TOKEN = $matches[1].Trim()
+            Write-ColorMsg "[OK] HF_TOKEN found - using authenticated requests (faster)" Green
+        }
+    }
+}
+
+if (-not $env:HF_TOKEN) {
+    Write-Host "[!] HF_TOKEN not set - using unauthenticated requests"
+    Write-Host "    Downloads will be slower but still work"
+    Write-Host "    To speed up: add HF_TOKEN=your_token to .env"
+    Write-Host ""
+}
+
 Write-Host "[i] Downloading from HuggingFace..."
 Write-Host "    This will download ~2GB of models"
 Write-Host ""

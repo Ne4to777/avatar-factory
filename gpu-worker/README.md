@@ -55,6 +55,25 @@
 
 **Важно:** правая кнопка по `install.bat` → «Запуск от имени администратора».
 
+### (Опционально) Ускорение загрузки моделей
+
+Перед установкой MuseTalk можно настроить HuggingFace токен для более быстрой загрузки:
+
+1. Создайте файл `.env` в папке `gpu-worker`:
+   ```cmd
+   notepad .env
+   ```
+
+2. Добавьте:
+   ```env
+   HF_TOKEN=your_token_here
+   API_KEY=your-secret-key-123
+   ```
+
+3. Получите токен на https://huggingface.co/settings/tokens
+
+Это увеличит скорость загрузки моделей в 2-3 раза (authenticated vs unauthenticated requests).
+
 ### Что делает install.bat
 
 - Проверяет систему (Python 3.11, CUDA, GPU)
