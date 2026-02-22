@@ -717,7 +717,7 @@ $step8 = Invoke-Step "SadTalker Setup" {
             
             # Try again without --no-build-isolation
             Write-Info "Retrying installation..."
-            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt")
+            $sadPipArgs = @("-m", "pip", "install", "-r", "requirements.txt", "--progress-bar", "on")
             if ($Silent) { $sadPipArgs += "--quiet" }
             
             & $venvPythonPath @sadPipArgs
