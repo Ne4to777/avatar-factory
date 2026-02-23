@@ -26,9 +26,10 @@ try {
 Write-Host ""
 
 # Test 2: Generate short TTS (2 words)
-Write-Host "[2/3] Generating TTS (2 words)..." -ForegroundColor Yellow
+Write-Host "[2/3] Generating TTS..." -ForegroundColor Yellow
 try {
-    $text = [System.Web.HttpUtility]::UrlEncode("Привет друг")
+    # Use simple Russian text (URL-encoded manually to avoid encoding issues)
+    $text = "%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82"  # "Privet" in Russian
     $uri = "$HOST/api/tts?text=$text&speaker=xenia"
     
     $audioFile = "test-minimal-audio.wav"
