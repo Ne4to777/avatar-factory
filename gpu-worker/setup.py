@@ -8,8 +8,7 @@ setup(
     name="avatar-factory-gpu-worker",
     version="1.0.0",
     description="GPU Worker for Avatar Factory - AI model processing server",
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
+    # long_description omitted to support Docker builds without README.md
     author="Avatar Factory",
     author_email="contact@avatar-factory.local",
     url="https://github.com/Ne4to777/avatar-factory",

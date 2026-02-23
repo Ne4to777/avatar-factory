@@ -2,7 +2,7 @@
 name = "avatar-factory-gpu-worker"
 version = "1.0.0"
 description = "GPU Worker for Avatar Factory - AI model processing server"
-readme = "README.md"
+# readme = "README.md"  # Excluded in .dockerignore to reduce context size
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
