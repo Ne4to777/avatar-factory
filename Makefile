@@ -25,6 +25,10 @@ help:
 	@echo "  make worker           - Start worker"
 	@echo "  make stop             - Stop all services"
 	@echo ""
+	@echo "$(GREEN)GPU Worker:$(NC)"
+	@echo "  make build-gpu        - Build GPU Worker image"
+	@echo "  make start-gpu        - Build & start GPU Worker"
+	@echo ""
 	@echo "$(GREEN)Test:$(NC)"
 	@echo "  make test             - Run all tests"
 	@echo "  make test-basic       - Run basic tests"
@@ -79,6 +83,31 @@ setup-docker:
 	@echo "  --profile app    # Add App + Worker"
 	@echo "  --profile gpu    # Add GPU Worker"
 	@echo "  --profile full   # Everything"
+
+# 🎮 Build GPU Worker
+build-gpu:
+	@echo -e "$(BLUE)Building GPU Worker Docker image...$(NC)"
+	@echo -e "$(YELLOW)This may take 10-20 minutes on first build$(NC)"
+	docker build -f gpu-worker/Dockerfile -t avatar-gpu-worker:latest gpu-worker
+	@echo -e "$(GREEN)✓ GPU Worker image built$(NC)"
+
+# 🚀 Start GPU Worker
+start-gpu: build-gpu
+	@echo -e "$(BLUE)Starting GPU Worker container...$(NC)"
+	docker stop avatar-gpu-worker 2>/dev/null || true
+	docker rm avatar-gpu-worker 2>/dev/null || true
+	docker run -d \
+		--name avatar-gpu-worker \
+		--gpus all \
+		-p 8001:8001 \
+		--env-file gpu-worker/.env \
+		--restart unless-stopped \
+		-v "$(PWD)/gpu-worker/checkpoints:/app/checkpoints" \
+		-v "$(PWD)/gpu-worker/models:/app/models" \
+		avatar-gpu-worker:latest
+	@echo -e "$(GREEN)✓ GPU Worker started$(NC)"
+	@echo ""
+	@echo "Health check: http://localhost:8001/health"
 
 # 🗄️ Настройка базы данных
 setup-db:

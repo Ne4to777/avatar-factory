@@ -1,0 +1,93 @@
+# Docker ignore for avatar-factory root
+# This applies when building from project root
+
+# Node.js (676MB!)
+node_modules/
+**/node_modules/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+tests/
+test/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+*.md
+docs/
+
+# CI/CD
+.github/
+
+# Project files
+package.json
+package-lock.json
+tsconfig.json
+next.config.js
+tailwind.config.ts
+postcss.config.js
+vitest.config.ts
+next-env.d.ts
+
+# TypeScript source (only Python needed for gpu-worker)
+app/
+lib/
+tests/
+workers/
+prisma/
+
+# Test files
+test-*.ts
+*.test.ts
+*.spec.ts
+test-*.sh
+
+# Other workers
+cpu-server.py
+mock-gpu-server.py
+
+# Docker compose (not needed in image)
+docker-compose.yml
+Makefile
+install.sh
