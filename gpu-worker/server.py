@@ -59,6 +59,26 @@ try:
             @staticmethod
             def device_count():
                 return 0
+            
+            @staticmethod
+            def empty_cache():
+                pass  # No-op
+            
+            @staticmethod
+            def synchronize():
+                pass  # No-op
+            
+            @staticmethod
+            def current_device():
+                return 0
+            
+            @staticmethod
+            def get_device_name(device=None):
+                return "XPU (not available)"
+            
+            @staticmethod
+            def set_device(device):
+                pass  # No-op
         
         torch.xpu = XPUStub()
         logger.info("torch.xpu stub added successfully")
