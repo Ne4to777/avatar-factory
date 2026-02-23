@@ -26,6 +26,11 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
     && rm /tmp/miniconda.sh \
     && /opt/conda/bin/conda init bash
 
+# Accept conda Terms of Service
+RUN conda config --set channel_priority flexible \
+    && conda config --add channels conda-forge \
+    && echo "yes" | conda tos accept
+
 # Create conda environment
 RUN conda create -n avatar python=3.11 -y
 
