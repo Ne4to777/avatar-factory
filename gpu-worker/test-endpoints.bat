@@ -14,15 +14,15 @@ curl -X GET "%HOST%/health" -H "x-api-key: %API_KEY%"
 echo.
 echo.
 
-echo [2/4] Testing TTS with English text...
+echo [2/4] Testing TTS with speaker aidar...
 echo.
-curl -X POST "%HOST%/api/tts?text=Hello&speaker=aidar" -H "x-api-key: %API_KEY%" --output test-tts-en.wav -w "\nHTTP Status: %%{http_code}\n"
+curl -X POST "%HOST%/api/tts?text=Привет мир&speaker=aidar" -H "x-api-key: %API_KEY%" --output test-tts-aidar.wav -w "\nHTTP Status: %%{http_code}\n"
 echo.
 echo.
 
-echo [3/4] Testing TTS with simple text...
+echo [3/4] Testing TTS with speaker xenia...
 echo.
-curl -X POST "%HOST%/api/tts?text=Test&speaker=xenia" -H "x-api-key: %API_KEY%" --output test-tts-simple.wav -w "\nHTTP Status: %%{http_code}\n"
+curl -X POST "%HOST%/api/tts?text=Добро пожаловать&speaker=xenia" -H "x-api-key: %API_KEY%" --output test-tts-xenia.wav -w "\nHTTP Status: %%{http_code}\n"
 echo.
 echo.
 
@@ -35,6 +35,6 @@ echo.
 echo ========================================
 echo Tests Complete!
 echo ========================================
-echo Check files: test-tts-en.wav, test-tts-simple.wav, test-bg.png
+echo Check files: test-tts-aidar.wav, test-tts-xenia.wav, test-bg.png
 echo.
 pause
