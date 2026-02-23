@@ -35,7 +35,7 @@ try:
     logger.info("Importing FastAPI...")
     from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Query
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, StreamingResponse
     logger.info("FastAPI imported successfully")
 except Exception as e:
     logger.error(f"Failed to import FastAPI: {e}")
@@ -477,7 +477,25 @@ async def create_lipsync(
         logger.info("Cleaned up input files")
         
         logger.info(f"Sending video file ({video_size_mb:.2f} MB) to client...")
-        return FileResponse(output_path, media_type="video/mp4")
+        
+        # Use streaming response for reliable large file transfer
+        def iterfile():
+            with open(output_path, "rb") as f:
+                chunk_size = 64 * 1024  # 64KB chunks
+                while chunk := f.read(chunk_size):
+                    yield chunk
+            # Clean up temp file after sending
+            output_path.unlink()
+            logger.info(f"Video sent and cleaned up: {output_path.name}")
+        
+        return StreamingResponse(
+            iterfile(),
+            media_type="video/mp4",
+            headers={
+                "Content-Disposition": f"attachment; filename=lipsync_{os.urandom(4).hex()}.mp4",
+                "Content-Length": str(output_path.stat().st_size)
+            }
+        )
         
     except Exception as e:
         import traceback
@@ -580,13 +598,16 @@ if __name__ == "__main__":
         logger.info("="*60)
         
         # Disable reload and workers to prevent double startup
+        # Increase timeouts for long video generation/transfer
         uvicorn.run(
             app,
             host=host,
             port=port,
             log_level="info",
             reload=False,
-            workers=1
+            workers=1,
+            timeout_keep_alive=900,  # 15 minutes for long video generation
+            timeout_graceful_shutdown=30
         )
     except KeyboardInterrupt:
         logger.info("\n" + "="*60)
