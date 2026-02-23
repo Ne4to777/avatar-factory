@@ -1,79 +1,150 @@
 @echo off
-REM Avatar Factory GPU Worker - One-Command Installer Wrapper
-REM Runs setup.ps1 with execution policy bypass.
-REM Requires: Run as Administrator
+REM Avatar Factory GPU Worker - WORKING Installation
+REM This uses PyTorch 2.1.0 + openmim (proven method)
 
-setlocal
-
-set "GREEN=[92m"
-set "YELLOW=[93m"
-set "RED=[91m"
-set "NC=[0m"
-
-reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
+setlocal EnableDelayedExpansion
 
 echo.
-echo %GREEN%Avatar Factory GPU Worker - Installer%NC%
+echo ============================================
+echo  Avatar Factory GPU Worker - Installation
+echo ============================================
 echo.
 
-REM Check if running as administrator (multiple methods for reliability)
-echo %YELLOW%Checking administrator rights...%NC%
-
-REM Method 1: net session
-net session >nul 2>&1
-set "ADMIN_CHECK1=%errorLevel%"
-
-REM Method 2: fsutil (alternative check)
-fsutil dirty query %SystemDrive% >nul 2>&1
-set "ADMIN_CHECK2=%errorLevel%"
-
-if %ADMIN_CHECK1% neq 0 (
-    if %ADMIN_CHECK2% neq 0 (
-        echo %RED%Error: Not running as Administrator%NC%
-        echo %YELLOW%  net session result: %ADMIN_CHECK1%%NC%
-        echo %YELLOW%  fsutil result: %ADMIN_CHECK2%%NC%
-        echo.
-        echo %YELLOW%Setup requires administrator rights for Python, firewall, etc.%NC%
-        echo.
-        echo %YELLOW%To run as Administrator:%NC%
-        echo   1. Right-click this file (install.bat)
-        echo   2. Select "Run as administrator"
-        echo.
-        echo   Or open Command Prompt as Administrator:
-        echo   - Press Win + X
-        echo   - Select "Command Prompt (Admin)" or "Terminal (Admin)"
-        echo   - Run: cd /d "%~dp0" ^&^& install.bat
-        echo.
-        pause
-        exit /b 1
-    )
-)
-
-echo %GREEN%Administrator rights confirmed.%NC%
-echo.
-
-REM Change to script directory
-cd /d "%~dp0"
-
-REM Run setup.ps1
-if not exist "setup.ps1" (
-    echo %RED%Error: setup.ps1 not found%NC%
+REM Check Python
+where python >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [ERROR] Python not found!
+    echo Install Python 3.11: https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-echo %GREEN%Running setup...%NC%
+python --version
 echo.
-powershell -ExecutionPolicy Bypass -NoProfile -File ".\setup.ps1" %*
-set SETUP_EXIT=%errorLevel%
 
-echo.
-if %SETUP_EXIT% equ 0 (
-    echo %GREEN%Installation completed successfully.%NC%
+REM Create venv (skip if exists)
+if exist venv\Scripts\python.exe (
+    echo [OK] Virtual environment exists
 ) else (
-    echo %RED%Installation failed. Exit code: %SETUP_EXIT%%NC%
+    echo [1/7] Creating virtual environment...
+    python -m venv venv
+    if %errorLevel% neq 0 (
+        echo [ERROR] Failed to create venv
+        pause
+        exit /b 1
+    )
+    echo [OK] venv created
 )
+echo.
 
+REM Install PyTorch 2.1.0 (has prebuilt mmcv wheels!)
+echo [2/7] Installing PyTorch 2.1.0 + CUDA 11.8...
+echo This downloads ~2GB, takes 5-10 minutes
+venv\Scripts\pip.exe install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install PyTorch
+    pause
+    exit /b 1
+)
+echo [OK] PyTorch 2.1.0 installed
+echo.
+
+REM Install openmim
+echo [3/7] Installing openmim...
+venv\Scripts\pip.exe install openmim
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install openmim
+    pause
+    exit /b 1
+)
+echo [OK] openmim installed
+echo.
+
+REM Install mmengine
+echo [4/7] Installing mmengine...
+venv\Scripts\python.exe -m mim install mmengine
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install mmengine
+    pause
+    exit /b 1
+)
+echo [OK] mmengine installed
+echo.
+
+REM Install mmcv (prebuilt wheel via mim)
+echo [5/7] Installing mmcv...
+venv\Scripts\python.exe -m mim install mmcv
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install mmcv
+    pause
+    exit /b 1
+)
+echo [OK] mmcv installed
+echo.
+
+REM Install mmdet and mmpose
+echo [6/7] Installing mmdet and mmpose...
+venv\Scripts\python.exe -m mim install mmdet mmpose
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install mmdet/mmpose
+    pause
+    exit /b 1
+)
+echo [OK] mmdet and mmpose installed
+echo.
+
+REM Install other dependencies
+echo [7/7] Installing other dependencies...
+venv\Scripts\pip.exe install -r requirements.txt
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install dependencies
+    pause
+    exit /b 1
+)
+echo [OK] Dependencies installed
+echo.
+
+REM Clone MuseTalk
+if exist MuseTalk (
+    echo [OK] MuseTalk already exists
+) else (
+    echo Cloning MuseTalk...
+    git clone https://github.com/TMElyralab/MuseTalk.git
+    if %errorLevel% neq 0 (
+        echo [WARNING] Failed to clone MuseTalk
+    ) else (
+        echo [OK] MuseTalk cloned
+    )
+)
+echo.
+
+REM Create .env
+if not exist .env (
+    echo Creating .env...
+    (
+        echo GPU_API_KEY=%RANDOM%%RANDOM%%RANDOM%%RANDOM%
+        echo HOST=0.0.0.0
+        echo PORT=8001
+    ) > .env
+    echo [OK] .env created
+)
+echo.
+
+REM Test GPU
+echo ============================================
+echo Testing GPU...
+echo ============================================
+venv\Scripts\python.exe -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"Not detected\"}')"
+echo.
+
+echo ============================================
+echo  Installation Complete!
+echo ============================================
+echo.
+echo Start server:
+echo   run.bat
+echo.
+echo Or manually:
+echo   venv\Scripts\python.exe server.py
 echo.
 pause
-exit /b %SETUP_EXIT%

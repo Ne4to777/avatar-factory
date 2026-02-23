@@ -56,12 +56,15 @@ WORKDIR /app
 COPY requirements.txt pyproject.toml ./
 
 # Install PyTorch with CUDA
-# NOTE: This downloads ~3-4GB (pytorch, torchvision, torchaudio, cuda bindings)
-# First build takes 5-10 minutes, subsequent builds use cache
-RUN conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
+# NOTE: Using PyTorch 2.1.0 for better mmcv prebuilt wheel compatibility
+# This downloads ~2GB, first build takes 5-10 minutes, subsequent builds use cache
+RUN conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
 # Install build dependencies
-RUN pip install --no-cache-dir setuptools wheel pip
+RUN pip install --no-cache-dir setuptools wheel pip openmim
+
+# Install OpenMMLab packages via mim (official method with prebuilt wheels)
+RUN mim install mmengine mmcv mmdet mmpose
 
 # Install Python dependencies (includes MuseTalk dependencies)
 RUN pip install --no-cache-dir -r requirements.txt
