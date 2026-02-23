@@ -225,8 +225,13 @@ class MuseTalkInference:
                     torch.FloatTensor(arr) for arr in whisper_batch
                 ]).to(self.unet.device)
                 
-                # Convert latent batch to tensor (they are individual tensors)
-                latent_batch = torch.cat(latent_batch_list, dim=0)
+                # Stack latent batch (each latent is a separate tensor, stack creates batch dimension)
+                if len(latent_batch_list) == 1:
+                    latent_batch = latent_batch_list[0].unsqueeze(0)  # Add batch dimension for single item
+                else:
+                    latent_batch = torch.stack(latent_batch_list, dim=0)
+                
+                logger.info(f"Batch {i//batch_size}: audio shape {audio_feature_batch.shape}, latent shape {latent_batch.shape}")
                 
                 # Apply PE if available (V1 only, V15 has it built-in)
                 if self.pe is not None:
