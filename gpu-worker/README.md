@@ -28,9 +28,40 @@
 - [CUDA Toolkit 11.8](https://developer.nvidia.com/cuda-11-8-0-download-archive) — рекомендуется установить вручную
 - Запуск `install.bat` **от имени администратора** (для Python, firewall и т.д.)
 
-## 3. One-Command Installation
+## 3. Установка
 
-### Windows — одна команда
+### ⚡ Docker — РЕКОМЕНДУЕТСЯ для Windows
+
+**Единственный надежный способ запустить MuseTalk на Windows.**
+
+Полное руководство: **[DOCKER-WINDOWS.md](DOCKER-WINDOWS.md)** 📘
+
+**Быстрый старт:**
+
+```cmd
+# 1. Установите Docker Desktop + WSL 2 + NVIDIA Container Toolkit
+# (см. DOCKER-WINDOWS.md)
+
+# 2. Запустите одним скриптом
+docker-start.bat
+
+# 3. Проверьте
+curl http://localhost:8001/health
+```
+
+**Почему Docker:**
+- ✅ MuseTalk работает из коробки (OpenMMLab установлен автоматически)
+- ✅ Изолированная среда (не засоряет систему)
+- ✅ Легкие обновления
+- ✅ Работает на любой Windows (Home/Pro/Enterprise)
+
+---
+
+### 🪟 Windows — Native установка (БЕЗ MuseTalk)
+
+**Ограничение:** Lip-sync (MuseTalk) не работает на Windows без Docker.
+
+**Что работает:** TTS (Silero) + Image Generation (Stable Diffusion)
 
 1. Клонируйте репозиторий (если ещё не сделали):
 
@@ -122,18 +153,48 @@ GPU_API_KEY=<ваш ключ из gpu-worker>
 
 Узнать IP ПК: `ipconfig` (Windows) или `ifconfig` (macOS/Linux).
 
-## 6. Docker (рекомендуется для MuseTalk)
+## 6. Docker Setup (РЕКОМЕНДУЕТСЯ)
 
-MuseTalk требует OpenMMLab пакеты (mmcv, mmpose) которые сложно установить на Windows.
-**Используйте Docker:**
+MuseTalk требует OpenMMLab пакеты (mmcv, mmpose) которые **практически невозможно** установить на Windows через pip.
 
-```powershell
-cd gpu-worker
-docker build -t avatar-gpu .
-docker run --gpus all -p 8001:8001 -v ${PWD}/.env:/app/.env avatar-gpu
+### 📘 Полное руководство: [DOCKER-WINDOWS.md](DOCKER-WINDOWS.md)
+
+### Быстрый старт
+
+```cmd
+# Автоматическая установка и запуск
+docker-start.bat
+
+# Или вручную:
+docker build -t avatar-gpu-worker:latest .
+docker run -d --name avatar-gpu-worker --gpus all -p 8001:8001 --env-file .env avatar-gpu-worker:latest
 ```
 
-Docker образ включает Python 3.11 + PyTorch 2.7.0 + все зависимости + MuseTalk.
+### Требования
+
+1. **Docker Desktop** для Windows
+2. **WSL 2** backend
+3. **NVIDIA Container Toolkit** (для GPU)
+4. **30+ GB** свободного места
+
+### Управление
+
+```cmd
+docker-start.bat      # Запустить
+docker-stop.bat       # Остановить
+docker-restart.bat    # Перезапустить
+docker-logs.bat       # Посмотреть логи
+docker-shell.bat      # Зайти в контейнер
+docker-check.bat      # Проверить требования
+```
+
+Docker образ включает:
+- ✅ Python 3.11 + PyTorch 2.7.0
+- ✅ CUDA 11.8 + cuDNN
+- ✅ MuseTalk + OpenMMLab (mmcv, mmpose, mmdet)
+- ✅ Stable Diffusion XL
+- ✅ Silero TTS
+- ✅ Все зависимости
 
 **Без Docker:** Сервер работает, но lip-sync отключен (только TTS + Stable Diffusion).
 
