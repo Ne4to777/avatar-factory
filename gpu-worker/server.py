@@ -33,7 +33,7 @@ logger.info("="*60)
 # Import dependencies with logging
 try:
     logger.info("Importing FastAPI...")
-    from fastapi import FastAPI, UploadFile, File, HTTPException, Header
+    from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Query
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import FileResponse
     logger.info("FastAPI imported successfully")
@@ -304,15 +304,18 @@ async def health():
 
 @app.post("/api/tts")
 async def text_to_speech(
-    text: str,
-    speaker: str = "xenia",
+    text: str = Query(..., description="Text to synthesize"),
+    speaker: str = Query("xenia", description="Speaker voice"),
     x_api_key: str = Header()
 ):
     """Генерация аудио из текста (Silero TTS)"""
     verify_api_key(x_api_key)
     
+    if not tts_model:
+        raise HTTPException(status_code=503, detail="TTS model not loaded")
+    
     try:
-        logger.info(f"TTS request: {len(text)} chars, speaker: {speaker}")
+        logger.info(f"TTS request: text='{text[:50]}...', speaker={speaker}")
         
         # Генерация аудио
         audio = tts_model.apply_tts(
@@ -326,12 +329,13 @@ async def text_to_speech(
         import soundfile as sf
         sf.write(str(output_path), audio.cpu().numpy(), 48000)
         
-        logger.info(f"✅ TTS generated: {output_path}")
+        logger.info(f"✅ TTS generated: {output_path.name}")
         return FileResponse(output_path, media_type="audio/wav")
         
     except Exception as e:
-        logger.error(f"❌ TTS failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ TTS failed: {type(e).__name__}: {e}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 @app.post("/api/lipsync")
 async def create_lipsync(
@@ -391,17 +395,20 @@ async def create_lipsync(
 
 @app.post("/api/generate-background")
 async def generate_background(
-    prompt: str,
-    negative_prompt: str = "blurry, low quality, distorted",
-    width: int = 1080,
-    height: int = 1920,
+    prompt: str = Query(..., description="Background prompt"),
+    negative_prompt: str = Query("blurry, low quality, distorted", description="Negative prompt"),
+    width: int = Query(1080, description="Image width"),
+    height: int = Query(1920, description="Image height"),
     x_api_key: str = Header()
 ):
     """Генерация фона (Stable Diffusion XL)"""
     verify_api_key(x_api_key)
     
+    if not sd_pipeline:
+        raise HTTPException(status_code=503, detail="Stable Diffusion model not loaded")
+    
     try:
-        logger.info(f"Background generation: {prompt}")
+        logger.info(f"Background generation: prompt='{prompt[:50]}...', size={width}x{height}")
         
         # Генерация изображения
         image = sd_pipeline(
@@ -417,12 +424,13 @@ async def generate_background(
         output_path = TEMP_DIR / f"bg_{os.urandom(8).hex()}.png"
         image.save(output_path)
         
-        logger.info(f"✅ Background generated: {output_path}")
+        logger.info(f"✅ Background generated: {output_path.name}")
         return FileResponse(output_path, media_type="image/png")
         
     except Exception as e:
-        logger.error(f"❌ Background generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Background generation failed: {type(e).__name__}: {e}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
 
 @app.post("/api/cleanup")
 async def cleanup_temp_files(x_api_key: str = Header()):
