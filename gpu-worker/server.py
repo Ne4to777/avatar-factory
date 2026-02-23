@@ -188,7 +188,6 @@ async def load_models():
             logger.info("This may take 1-2 minutes on first run...")
             
             # Отключаем прогресс бар который зависает
-            import os
             os.environ['TQDM_DISABLE'] = '1'
             
             # Попытка загрузки с автоматической очисткой кеша при ошибке
