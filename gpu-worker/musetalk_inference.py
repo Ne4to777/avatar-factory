@@ -95,9 +95,9 @@ class MuseTalkInference:
                 self.pe = models[2]
                 # V15 doesn't include audio_processor in load_all_model, create it manually
                 logger.info("Creating Audio2Feature for V15...")
-                self.audio_processor = Audio2Feature(model_path="tiny")
+                self.audio_processor = Audio2Feature(model_path="./models/whisper/tiny.pt")
                 self.audio_processor.model.to(self.device)
-                logger.info(f"Audio2Feature loaded and moved to {self.device}")
+                logger.info(f"Audio2Feature loaded with model_path='./models/whisper/tiny.pt' and moved to {self.device}")
             else:
                 raise ValueError(f"Unexpected number of models: {len(models)}")
             
@@ -174,13 +174,15 @@ class MuseTalkInference:
             logger.info("Processing audio features...")
             try:
                 whisper_feature = self.audio_processor.audio2feat(str(audio_path))
-                logger.info(f"whisper_feature type: {type(whisper_feature)}, value: {whisper_feature if not hasattr(whisper_feature, 'shape') else f'array shape {whisper_feature.shape}'}")
+                logger.info(f"whisper_feature type: {type(whisper_feature)}, shape: {whisper_feature.shape if hasattr(whisper_feature, 'shape') else 'no shape'}")
                 
                 whisper_chunks = self.audio_processor.feature2chunks(
                     feature_array=whisper_feature,
                     fps=fps
                 )
-                logger.info(f"Audio processed: {len(whisper_chunks)} chunks, chunk type: {type(whisper_chunks[0]) if whisper_chunks else 'empty'}")
+                logger.info(f"Audio processed: {len(whisper_chunks)} chunks")
+                if whisper_chunks:
+                    logger.info(f"First chunk type: {type(whisper_chunks[0])}, shape: {whisper_chunks[0].shape if hasattr(whisper_chunks[0], 'shape') else 'no shape'}")
             except FileNotFoundError as e:
                 raise RuntimeError(f"Audio processing failed - ffmpeg not found in PATH: {e}") from e
             
@@ -235,7 +237,9 @@ class MuseTalkInference:
                 
                 # Apply PE if available (V1 only, V15 has it built-in)
                 if self.pe is not None:
+                    logger.info(f"Before PE: audio shape {audio_feature_batch.shape}")
                     audio_feature_batch = self.pe(audio_feature_batch)
+                    logger.info(f"After PE: audio shape {audio_feature_batch.shape}")
                 
                 # Generate
                 pred_latents = self.unet.model(
