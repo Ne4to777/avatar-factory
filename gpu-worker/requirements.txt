@@ -23,9 +23,10 @@ python-multipart>=0.0.9  # File uploads
 # ----------------------------------------------------------------
 # AI Models - Stable Diffusion XL
 # ----------------------------------------------------------------
-diffusers>=0.30.0        # Stable Diffusion XL pipeline
-transformers>=4.41.0     # Required by diffusers
-accelerate>=0.30.0       # Memory optimization
+# Using older versions compatible with PyTorch 2.1.0
+diffusers==0.25.1        # Stable Diffusion XL pipeline (compatible with PyTorch 2.1.0)
+transformers==4.36.2     # Required by diffusers (compatible with PyTorch 2.1.0)
+accelerate==0.25.0       # Memory optimization
 safetensors>=0.4.3       # Safe model loading
 huggingface-hub>=0.23.0  # Model downloads
 
