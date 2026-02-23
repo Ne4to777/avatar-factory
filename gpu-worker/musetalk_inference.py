@@ -76,13 +76,19 @@ class MuseTalkInference:
             logger.info("Loading MuseTalk models...")
             models = load_all_model()
             
+            # Debug: log model types to understand correct order
+            logger.info(f"Loaded {len(models)} models:")
+            for i, model in enumerate(models):
+                model_type = type(model).__name__
+                logger.info(f"  Model {i}: {model_type}")
+            
             # Handle both V1 (4 values) and V15 (3 values) API
             if len(models) == 4:
                 logger.info("MuseTalk V1 detected (4 models)")
                 self.audio_processor, self.vae, self.unet, self.pe = models
             elif len(models) == 3:
                 logger.info("MuseTalk V15 detected (3 models)")
-                # V15 order: vae, unet, audio_processor
+                # Try different order based on types
                 self.vae, self.unet, self.audio_processor = models
                 self.pe = None  # V15 doesn't use separate PE model
             else:
