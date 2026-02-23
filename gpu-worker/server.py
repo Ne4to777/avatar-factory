@@ -185,6 +185,11 @@ async def load_models():
         
         try:
             logger.info("Downloading/loading from torch.hub...")
+            logger.info("This may take 1-2 minutes on first run...")
+            
+            # Отключаем прогресс бар который зависает
+            import os
+            os.environ['TQDM_DISABLE'] = '1'
             
             # Попытка загрузки с автоматической очисткой кеша при ошибке
             try:
@@ -192,7 +197,8 @@ async def load_models():
                     repo_or_dir='snakers4/silero-models',
                     model='silero_tts',
                     language='ru',
-                    speaker='v3_1_ru'
+                    speaker='v3_1_ru',
+                    verbose=False  # Отключаем лишний вывод
                 )
             except FileNotFoundError as cache_error:
                 # Поврежденный кеш torch.hub - очищаем и пробуем снова
@@ -211,7 +217,8 @@ async def load_models():
                     model='silero_tts',
                     language='ru',
                     speaker='v3_1_ru',
-                    force_reload=True
+                    force_reload=True,
+                    verbose=False
                 )
             
             logger.info(f"Model downloaded, type: {type(tts_model)}")
