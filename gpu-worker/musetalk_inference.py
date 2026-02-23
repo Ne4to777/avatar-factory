@@ -36,7 +36,7 @@ logger.info(f"Changed working directory to MuseTalk: {os.getcwd()}")
 
 try:
     logger.info("Importing MuseTalk modules...")
-    from musetalk.utils.utils import load_all_model, get_file_type, get_video_fps
+    from musetalk.utils.utils import load_all_model, get_file_type, get_video_fps, datagen
     from musetalk.utils.preprocessing import get_landmark_and_bbox, read_imgs
     from musetalk.utils.blending import get_image
     from musetalk.whisper.audio2feature import Audio2Feature
@@ -213,33 +213,18 @@ class MuseTalkInference:
             coord_list_cycle = coord_list + coord_list[::-1]
             input_latent_list_cycle = input_latent_list + input_latent_list[::-1]
             
-            # Generate lip-synced frames
+            # Generate lip-synced frames using datagen (exactly as in original inference.py)
             logger.info(f"Generating {len(whisper_chunks)} frames...")
             res_frame_list = []
             
-            for i in range(0, len(whisper_chunks), batch_size):
-                batch_end = min(i + batch_size, len(whisper_chunks))
-                whisper_batch = whisper_chunks[i:batch_end]
-                latent_batch_list = input_latent_list_cycle[i:batch_end]
+            gen = datagen(whisper_chunks, input_latent_list_cycle, batch_size)
+            for i, (whisper_batch, latent_batch) in enumerate(gen):
+                # Follow exact same pattern as original inference.py
+                tensor_list = [torch.FloatTensor(arr) for arr in whisper_batch]
+                audio_feature_batch = torch.stack(tensor_list).to(self.unet.device)
+                audio_feature_batch = self.pe(audio_feature_batch)
                 
-                # Convert to tensors
-                audio_feature_batch = torch.stack([
-                    torch.FloatTensor(arr) for arr in whisper_batch
-                ]).to(self.unet.device)
-                
-                # Concatenate latent batch (each latent already has batch dimension [1, 8, 32, 32])
-                if len(latent_batch_list) == 1:
-                    latent_batch = latent_batch_list[0]  # Already has batch dimension
-                else:
-                    latent_batch = torch.cat(latent_batch_list, dim=0)  # Concatenate along batch dim
-                
-                logger.info(f"Batch {i//batch_size}: audio shape {audio_feature_batch.shape}, latent shape {latent_batch.shape}")
-                
-                # Apply PE if available (V1 only, V15 has it built-in)
-                if self.pe is not None:
-                    logger.info(f"Before PE: audio shape {audio_feature_batch.shape}")
-                    audio_feature_batch = self.pe(audio_feature_batch)
-                    logger.info(f"After PE: audio shape {audio_feature_batch.shape}")
+                logger.info(f"Batch {i}: audio {audio_feature_batch.shape}, latent {latent_batch.shape}")
                 
                 # Generate
                 pred_latents = self.unet.model(
@@ -249,7 +234,8 @@ class MuseTalkInference:
                 ).sample
                 
                 recon = self.vae.decode_latents(pred_latents)
-                res_frame_list.extend(recon)
+                for res_frame in recon:
+                    res_frame_list.append(res_frame)
             
             # Blend results back to original frames
             logger.info("Blending generated frames...")
