@@ -41,9 +41,9 @@ RUN conda install -c conda-forge mmcv mmdet mmpose -y
 WORKDIR /app
 
 # Copy requirements
-COPY requirements.txt musetalk-requirements.txt pyproject.toml ./
+COPY requirements.txt pyproject.toml ./
 
-# Install Python dependencies
+# Install Python dependencies (includes MuseTalk dependencies)
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install project
@@ -53,7 +53,6 @@ RUN pip install --no-cache-dir -e .
 # Setup MuseTalk
 RUN if [ ! -d "MuseTalk" ]; then \
     git clone https://github.com/TMElyralab/MuseTalk.git && \
-    pip install --no-cache-dir -r musetalk-requirements.txt && \
     pip install --no-cache-dir \
         git+https://github.com/TMElyralab/MMCM.git@main \
         git+https://github.com/TMElyralab/controlnet_aux.git@tme \
