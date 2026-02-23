@@ -277,15 +277,28 @@ class MuseTalkInference:
                     ).sample
                     
                     unet_time = time.time() - unet_start
-                    logger.info(f"  → UNet done in {unet_time:.2f}s, decoding latents...")
+                    logger.info(f"  → UNet done in {unet_time:.2f}s")
+                    logger.info(f"  → pred_latents shape: {pred_latents.shape}, dtype: {pred_latents.dtype}, device: {pred_latents.device}")
+                    logger.info(f"  → Starting VAE decode (this may take 30-60 seconds)...")
                     vae_start = time.time()
                     
-                    # Decode latents to frames
-                    recon = self.vae.decode_latents(pred_latents)
+                    # Decode latents to frames (decode one by one to avoid memory issues)
+                    recon = []
+                    batch_size_vae = pred_latents.shape[0]
+                    logger.info(f"  → Decoding {batch_size_vae} latents...")
+                    
+                    for j in range(batch_size_vae):
+                        if j % 2 == 0:  # Log every 2 frames
+                            elapsed = time.time() - vae_start
+                            logger.info(f"    → Decoding frame {j+1}/{batch_size_vae} (elapsed: {elapsed:.1f}s)")
+                        
+                        single_latent = pred_latents[j:j+1]
+                        decoded_frame = self.vae.decode_latents(single_latent)
+                        recon.extend(decoded_frame)
                     
                     vae_time = time.time() - vae_start
                     batch_time = time.time() - batch_start
-                    logger.info(f"  → VAE decoded {len(recon)} frames in {vae_time:.2f}s")
+                    logger.info(f"  → VAE decoded {len(recon)} frames in {vae_time:.2f}s ({vae_time/len(recon):.2f}s per frame)")
                     logger.info(f"  → Batch {i+1} completed in {batch_time:.2f}s total")
                     
                     for res_frame in recon:
