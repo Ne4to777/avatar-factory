@@ -60,8 +60,19 @@ if %errorLevel% neq 0 (
 echo [OK] PyTorch 2.1.0 installed
 echo.
 
+REM Install setuptools (required by openmim)
+echo [4/9] Installing setuptools...
+venv\Scripts\pip.exe install --upgrade setuptools
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install setuptools
+    pause
+    exit /b 1
+)
+echo [OK] setuptools installed
+echo.
+
 REM Install openmim
-echo [4/7] Installing openmim...
+echo [5/9] Installing openmim...
 venv\Scripts\pip.exe install openmim
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install openmim
@@ -72,7 +83,7 @@ echo [OK] openmim installed
 echo.
 
 REM Install mmengine
-echo [5/7] Installing mmengine...
+echo [6/9] Installing mmengine...
 venv\Scripts\python.exe -m mim install mmengine
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install mmengine
@@ -83,7 +94,7 @@ echo [OK] mmengine installed
 echo.
 
 REM Install mmcv (prebuilt wheel via mim)
-echo [6/7] Installing mmcv...
+echo [7/9] Installing mmcv...
 venv\Scripts\python.exe -m mim install mmcv
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install mmcv
@@ -94,7 +105,7 @@ echo [OK] mmcv installed
 echo.
 
 REM Install mmdet and mmpose
-echo [7/7] Installing mmdet and mmpose...
+echo [8/9] Installing mmdet and mmpose...
 venv\Scripts\python.exe -m mim install mmdet mmpose
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install mmdet/mmpose
@@ -105,7 +116,7 @@ echo [OK] mmdet and mmpose installed
 echo.
 
 REM Install other dependencies
-echo [8/8] Installing other dependencies...
+echo [9/9] Installing other dependencies...
 venv\Scripts\pip.exe install -r requirements.txt
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install dependencies
