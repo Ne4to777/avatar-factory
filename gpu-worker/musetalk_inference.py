@@ -217,18 +217,39 @@ class MuseTalkInference:
                 [str(p) for p in input_img_list],
                 bbox_shift
             )
+            
+            # Validate results
+            if not coord_list or not frame_list:
+                raise RuntimeError("No face detected in image. Please use a clear frontal face image.")
+            
             logger.info(f"Landmarks extracted: {len(coord_list)} coords, {len(frame_list)} frames")
             logger.info(f"coord_list type: {type(coord_list)}, first coord type: {type(coord_list[0]) if coord_list else 'empty'}")
             logger.info(f"frame_list type: {type(frame_list)}, first frame type: {type(frame_list[0]) if frame_list else 'empty'}")
             
+            # Check for None values
+            if frame_list[0] is None:
+                raise RuntimeError("Face detection returned None - image may be corrupted or face not detected")
+            
             # Prepare latents
             logger.info("Preparing latent representations...")
             input_latent_list = []
-            for bbox, frame in zip(coord_list, frame_list):
+            for idx, (bbox, frame) in enumerate(zip(coord_list, frame_list)):
+                if frame is None:
+                    raise RuntimeError(f"Frame {idx} is None - face detection may have failed")
+                
+                logger.info(f"Processing frame {idx}: shape={frame.shape}, bbox={bbox}")
                 x1, y1, x2, y2 = bbox
                 crop_frame = frame[y1:y2, x1:x2]
+                
+                if crop_frame.size == 0:
+                    raise RuntimeError(f"Cropped frame {idx} is empty - invalid bbox {bbox}")
+                
                 crop_frame = cv2.resize(crop_frame, (256, 256), interpolation=cv2.INTER_LANCZOS4)
                 latents = self.vae.get_latents_for_unet(crop_frame)
+                
+                if latents is None:
+                    raise RuntimeError(f"VAE returned None for frame {idx}")
+                
                 input_latent_list.append(latents)
             
             logger.info(f"Latents prepared: {len(input_latent_list)} items, first latent type: {type(input_latent_list[0])}, shape: {input_latent_list[0].shape if hasattr(input_latent_list[0], 'shape') else 'no shape'}")
