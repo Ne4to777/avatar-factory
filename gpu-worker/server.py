@@ -476,7 +476,9 @@ async def create_lipsync(
         return FileResponse(output_path, media_type="video/mp4")
         
     except Exception as e:
+        import traceback
         logger.error(f"❌ Lip-sync failed: {e}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-background")
