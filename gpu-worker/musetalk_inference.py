@@ -234,7 +234,18 @@ class MuseTalkInference:
                 # Convert whisper_batch to tensor
                 if isinstance(whisper_batch, list):
                     # List of numpy arrays
-                    tensor_list = [torch.FloatTensor(arr) for arr in whisper_batch]
+                    logger.info(f"whisper_batch is list with {len(whisper_batch)} items")
+                    tensor_list = []
+                    for j, arr in enumerate(whisper_batch):
+                        logger.info(f"  Item {j}: type={type(arr)}, shape={arr.shape if hasattr(arr, 'shape') else 'no shape'}")
+                        if isinstance(arr, np.ndarray):
+                            tensor_list.append(torch.from_numpy(arr).float())
+                        elif torch.is_tensor(arr):
+                            tensor_list.append(arr.float())
+                        else:
+                            raise TypeError(f"Unexpected array type in whisper_batch[{j}]: {type(arr)}")
+                    
+                    logger.info(f"tensor_list has {len(tensor_list)} tensors, first type: {type(tensor_list[0])}")
                     audio_feature_batch = torch.stack(tensor_list).to(self.unet.device)
                 elif torch.is_tensor(whisper_batch):
                     # Already a tensor
