@@ -73,8 +73,20 @@ class MuseTalkInference:
         
         # Load all MuseTalk models
         try:
-            logger.info("Loading MuseTalk models (audio_processor, vae, unet, pe)...")
-            self.audio_processor, self.vae, self.unet, self.pe = load_all_model()
+            logger.info("Loading MuseTalk models...")
+            models = load_all_model()
+            
+            # Handle both V1 (4 values) and V15 (3 values) API
+            if len(models) == 4:
+                logger.info("MuseTalk V1 detected (4 models)")
+                self.audio_processor, self.vae, self.unet, self.pe = models
+            elif len(models) == 3:
+                logger.info("MuseTalk V15 detected (3 models)")
+                self.audio_processor, self.vae, self.unet = models
+                self.pe = None  # V15 doesn't use separate PE model
+            else:
+                raise ValueError(f"Unexpected number of models: {len(models)}")
+            
             logger.info("MuseTalk models loaded successfully")
             
             self.timesteps = torch.tensor([0], device=self.device)
