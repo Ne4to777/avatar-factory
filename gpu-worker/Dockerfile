@@ -43,12 +43,8 @@ RUN conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-c
 # Install build dependencies
 RUN pip install --no-cache-dir setuptools wheel pip
 
-# Install OpenMMLab packages using prebuilt wheels (avoid compilation)
-RUN pip install --no-cache-dir \
-    mmengine \
-    mmcv==2.2.0 \
-    mmdet \
-    mmpose
+# Note: mmcv/mmdet/mmpose are NOT required by official MuseTalk
+# They were removed to avoid compilation issues
 
 WORKDIR /app
 

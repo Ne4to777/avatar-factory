@@ -21,6 +21,9 @@ huggingface-hub>=0.23.0
 sentencepiece>=0.2.0
 protobuf>=5.27.0
 
+# TensorFlow (required by MuseTalk)
+tensorflow>=2.12.0
+
 # Audio (latest stable)
 soundfile>=0.12.1
 librosa>=0.10.2
