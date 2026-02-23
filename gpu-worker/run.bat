@@ -28,6 +28,11 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8001 ^| findstr LISTENING') 
     )
 )
 
+echo Cleaning Python cache...
+if exist __pycache__ rd /s /q __pycache__
+if exist MuseTalk\__pycache__ rd /s /q MuseTalk\__pycache__
+for /d /r %%d in (__pycache__) do @if exist "%%d" rd /s /q "%%d"
+
 echo.
 echo Starting server on http://localhost:8001
 echo Press Ctrl+C to stop

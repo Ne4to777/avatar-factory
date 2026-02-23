@@ -45,6 +45,12 @@ if ($connections) {
     Write-Host "No existing server found on port $port" -ForegroundColor Green
 }
 
+# Clean Python cache
+Write-Host "Cleaning Python cache..." -ForegroundColor Yellow
+Get-ChildItem -Path . -Filter "__pycache__" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path . -Filter "*.pyc" -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+Write-Host "Cache cleaned" -ForegroundColor Green
+
 Write-Host ""
 Write-Host "Starting server on http://localhost:8001" -ForegroundColor Green
 Write-Host "Press Ctrl+C to stop" -ForegroundColor Yellow

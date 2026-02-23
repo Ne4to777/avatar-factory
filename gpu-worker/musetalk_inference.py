@@ -67,25 +67,9 @@ def blend_image_simple(background, foreground, bbox):
     result[y1:y2, x1:x2] = foreground
     return result
 
-# Try to import get_image from blending module, but always use fallback for now
-# (MuseTalk's get_image may have dependencies we don't have)
-get_image_imported = None
-try:
-    from musetalk.utils.blending import get_image as get_image_imported
-    logger.info(f"get_image imported from musetalk.utils.blending: {get_image_imported}")
-    
-    # Test if it's callable
-    if callable(get_image_imported):
-        logger.info("get_image is callable, will try to use it")
-        get_image = get_image_imported
-    else:
-        logger.warning(f"get_image is not callable: {type(get_image_imported)}, using fallback")
-        get_image = blend_image_simple
-except Exception as e:
-    logger.warning(f"Could not import/use get_image: {type(e).__name__}: {e}, using fallback")
-    get_image = blend_image_simple
-
-logger.info(f"Using blend function: {get_image.__name__}")
+# ALWAYS use our fallback function for blending (MuseTalk's get_image has issues)
+get_image = blend_image_simple
+logger.info(f"✓ Using blend function: {get_image.__name__}")
 
 
 class MuseTalkInference:
@@ -349,7 +333,6 @@ class MuseTalkInference:
             # Blend results back to original frames
             total_frames = len(res_frame_list)
             logger.info(f"Blending {total_frames} generated frames...")
-            logger.info(f"get_image function: {get_image}")
             blend_start = time.time()
             
             for i, res_frame in enumerate(res_frame_list):
