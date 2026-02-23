@@ -1,6 +1,6 @@
 # ================================================================
 # Avatar Factory GPU Worker - Dependencies
-# Optimized for PyTorch 2.7.0 + CUDA 11.8
+# Optimized for PyTorch 2.1.0 + CUDA 11.8
 # ================================================================
 
 # Core utilities
@@ -17,9 +17,9 @@ uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9  # File uploads
 
 # ----------------------------------------------------------------
-# PyTorch (install separately via conda - see Dockerfile)
+# PyTorch (install separately BEFORE other deps)
 # ----------------------------------------------------------------
-# conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8
+# pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
 
 # ----------------------------------------------------------------
 # AI Models - Stable Diffusion XL
@@ -41,7 +41,7 @@ librosa>=0.10.2    # Audio processing (MuseTalk)
 # ----------------------------------------------------------------
 opencv-python>=4.10.0  # Computer vision (MuseTalk)
 pillow>=10.3.0         # Image processing
-numpy>=1.26.4          # Array operations
+numpy>=1.26.4,<2.0.0   # Array operations (PyTorch 2.1.0 requires NumPy 1.x)
 
 # ----------------------------------------------------------------
 # MuseTalk Dependencies

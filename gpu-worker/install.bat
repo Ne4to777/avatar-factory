@@ -37,8 +37,19 @@ if exist venv\Scripts\python.exe (
 )
 echo.
 
+REM Install NumPy 1.x first (PyTorch 2.1.0 incompatible with NumPy 2.x!)
+echo [2/7] Installing NumPy 1.x...
+venv\Scripts\pip.exe install "numpy>=1.26.4,<2.0.0"
+if %errorLevel% neq 0 (
+    echo [ERROR] Failed to install NumPy
+    pause
+    exit /b 1
+)
+echo [OK] NumPy installed
+echo.
+
 REM Install PyTorch 2.1.0 (has prebuilt mmcv wheels!)
-echo [2/7] Installing PyTorch 2.1.0 + CUDA 11.8...
+echo [3/7] Installing PyTorch 2.1.0 + CUDA 11.8...
 echo This downloads ~2GB, takes 5-10 minutes
 venv\Scripts\pip.exe install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
 if %errorLevel% neq 0 (
@@ -50,7 +61,7 @@ echo [OK] PyTorch 2.1.0 installed
 echo.
 
 REM Install openmim
-echo [3/7] Installing openmim...
+echo [4/7] Installing openmim...
 venv\Scripts\pip.exe install openmim
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install openmim
@@ -61,7 +72,7 @@ echo [OK] openmim installed
 echo.
 
 REM Install mmengine
-echo [4/7] Installing mmengine...
+echo [5/7] Installing mmengine...
 venv\Scripts\python.exe -m mim install mmengine
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install mmengine
@@ -72,7 +83,7 @@ echo [OK] mmengine installed
 echo.
 
 REM Install mmcv (prebuilt wheel via mim)
-echo [5/7] Installing mmcv...
+echo [6/7] Installing mmcv...
 venv\Scripts\python.exe -m mim install mmcv
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install mmcv
@@ -83,7 +94,7 @@ echo [OK] mmcv installed
 echo.
 
 REM Install mmdet and mmpose
-echo [6/7] Installing mmdet and mmpose...
+echo [7/7] Installing mmdet and mmpose...
 venv\Scripts\python.exe -m mim install mmdet mmpose
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install mmdet/mmpose
@@ -94,7 +105,7 @@ echo [OK] mmdet and mmpose installed
 echo.
 
 REM Install other dependencies
-echo [7/7] Installing other dependencies...
+echo [8/8] Installing other dependencies...
 venv\Scripts\pip.exe install -r requirements.txt
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install dependencies
