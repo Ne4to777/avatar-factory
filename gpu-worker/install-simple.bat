@@ -59,8 +59,13 @@ if %errorLevel% neq 0 (
 echo [OK] PyTorch installed
 echo.
 
+REM Install chumpy first (needed by mmpose, requires special handling)
+echo [3/5] Installing chumpy...
+venv\Scripts\pip.exe install --no-build-isolation chumpy
+echo.
+
 REM Install dependencies
-echo [3/4] Installing dependencies...
+echo [4/5] Installing dependencies...
 venv\Scripts\pip.exe install -r requirements.txt
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install dependencies
@@ -71,7 +76,7 @@ echo [OK] Dependencies installed
 echo.
 
 REM Clone MuseTalk
-echo [4/4] Cloning MuseTalk...
+echo [5/5] Cloning MuseTalk...
 if exist MuseTalk (
     echo MuseTalk exists, skipping
 ) else (

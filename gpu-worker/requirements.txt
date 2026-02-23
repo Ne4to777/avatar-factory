@@ -50,6 +50,10 @@ einops>=0.8.0           # Tensor operations
 omegaconf>=2.3.0        # Config management
 ffmpeg-python>=0.2.0    # Video encoding
 moviepy>=1.0.3          # Video manipulation
+chumpy                  # Mesh processing (required by mmpose)
+mmcv                    # Computer vision (required by MuseTalk)
+mmpose                  # Pose estimation (required by MuseTalk)
+mmdet                   # Object detection (required by MuseTalk)
 
 # ----------------------------------------------------------------
 # Optional: TensorFlow (listed in MuseTalk requirements.txt)
