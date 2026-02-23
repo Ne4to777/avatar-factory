@@ -45,6 +45,24 @@ try:
     logger.info("Importing PyTorch...")
     import torch
     logger.info(f"PyTorch imported successfully: {torch.__version__}")
+    
+    # Fix for PyTorch 2.1.0: add torch.xpu stub (required by diffusers and MuseTalk)
+    if not hasattr(torch, 'xpu'):
+        logger.info("Adding torch.xpu stub (not present in PyTorch 2.1.0)")
+        
+        class XPUStub:
+            """Stub for Intel XPU API (not available in PyTorch 2.1.0)"""
+            @staticmethod
+            def is_available():
+                return False
+            
+            @staticmethod
+            def device_count():
+                return 0
+        
+        torch.xpu = XPUStub()
+        logger.info("torch.xpu stub added successfully")
+    
 except Exception as e:
     logger.error(f"Failed to import PyTorch: {e}")
     raise
