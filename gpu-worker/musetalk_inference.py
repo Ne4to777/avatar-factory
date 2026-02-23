@@ -66,6 +66,11 @@ class MuseTalkInference:
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
         logger.info(f"Initializing MuseTalk on device: {self.device}")
         
+        # MuseTalk needs to be in its directory to load models
+        original_cwd = os.getcwd()
+        os.chdir(MUSETALK_PATH)
+        logger.info(f"Changed to MuseTalk directory: {os.getcwd()}")
+        
         # Load all MuseTalk models
         try:
             logger.info("Loading MuseTalk models (audio_processor, vae, unet, pe)...")
@@ -79,6 +84,10 @@ class MuseTalkInference:
             logger.error(f"Failed to load MuseTalk models: {e}")
             self.initialized = False
             raise
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
+            logger.info(f"Restored working directory: {os.getcwd()}")
     
     @torch.no_grad()
     def generate(
