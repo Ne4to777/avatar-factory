@@ -43,15 +43,12 @@ RUN conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-c
 # Install build dependencies
 RUN pip install --no-cache-dir setuptools wheel pip
 
-# Install chumpy first (dependency of mmpose, requires special handling)
-RUN pip install --no-cache-dir --no-build-isolation chumpy
-
-# Install OpenMMLab packages using openmim (official method)
-RUN pip install --no-cache-dir openmim && \
-    mim install mmengine && \
-    mim install "mmcv>=2.0.1" && \
-    mim install "mmdet>=3.1.0" && \
-    mim install "mmpose>=1.1.0"
+# Install OpenMMLab packages using prebuilt wheels (avoid compilation)
+RUN pip install --no-cache-dir \
+    mmengine \
+    mmcv==2.2.0 \
+    mmdet \
+    mmpose
 
 WORKDIR /app
 
