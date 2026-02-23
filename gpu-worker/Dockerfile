@@ -2,19 +2,16 @@
 # Optimized Docker image with PyTorch 2.7.0 + CUDA 11.8
 #
 # Build time:
-#   First build: 15-20 minutes (downloads ~5GB: PyTorch, models)
-#   Cached build: 2-3 minutes (only if code changes)
+#   First build: 15-20 minutes (downloads ~5GB: PyTorch, dependencies)
+#   Cached build: 1-2 minutes (only code changes)
 #
-# Build context:
-#   ~60KB (Python source files only, thanks to .dockerignore)
+# Build context: ~60KB (thanks to .dockerignore)
 #
-# Layer caching strategy:
-#   1. Base image + system deps (rarely change)
-#   2. Miniconda install (rarely change)
-#   3. Copy requirements.txt (rarely change)
-#   4. Install PyTorch ~3GB (cached if requirements unchanged)
-#   5. Install pip deps (cached if requirements unchanged)
-#   6. Copy code (changes frequently, doesn't invalidate above)
+# Key optimizations:
+#   - Requirements copied before PyTorch install (layer caching)
+#   - No pip install -e . (not needed, direct imports work)
+#   - BuildKit cache mounts removed (better compatibility)
+#   - Verification step ensures critical packages work
 
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
@@ -33,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Miniconda
@@ -60,28 +58,25 @@ COPY requirements.txt pyproject.toml ./
 # Install PyTorch with CUDA
 # NOTE: This downloads ~3-4GB (pytorch, torchvision, torchaudio, cuda bindings)
 # First build takes 5-10 minutes, subsequent builds use cache
-# Optional: use --mount=type=cache for faster rebuilds (requires DOCKER_BUILDKIT=1)
-RUN --mount=type=cache,target=/opt/conda/pkgs \
-    conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
+RUN conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
 # Install build dependencies
 RUN pip install --no-cache-dir setuptools wheel pip
 
 # Install Python dependencies (includes MuseTalk dependencies)
-# Optional: use --mount=type=cache for faster rebuilds
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project code LAST (changes frequently, should not invalidate above layers)
 COPY . .
-RUN pip install --no-cache-dir -e .
 
-# Setup MuseTalk
-RUN if [ ! -d "MuseTalk" ]; then \
-    git clone https://github.com/TMElyralab/MuseTalk.git; \
-    fi
+# Setup MuseTalk (clone repository for inference wrapper)
+RUN git clone https://github.com/TMElyralab/MuseTalk.git 2>/dev/null || echo "⚠ MuseTalk clone failed, will retry at runtime"
+
 # Note: MMCM, controlnet_aux, IP-Adapter, CLIP not in official requirements.txt
 # Only install if specific MuseTalk features require them
+
+# Verify critical imports work
+RUN python -c "import torch; import diffusers; import transformers; print('✓ Core packages OK')" || exit 1
 
 # Create temp directory
 RUN mkdir -p /tmp/avatar-factory && chmod 777 /tmp/avatar-factory

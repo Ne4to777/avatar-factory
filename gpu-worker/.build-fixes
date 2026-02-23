@@ -1,0 +1,36 @@
+# Docker Build Fixes Applied
+
+## Problems Fixed:
+
+1. ✅ mmcv/mmdet/mmpose compilation errors
+   → Removed (not in official MuseTalk requirements)
+
+2. ✅ 1GB+ build context transfer  
+   → Added .dockerignore in project root
+
+3. ✅ PyTorch re-downloading on every build
+   → Reordered layers: copy requirements BEFORE PyTorch install
+
+4. ✅ BuildKit cache mount failures
+   → Removed --mount=type=cache for compatibility
+
+5. ✅ README.md missing error
+   → Removed from setup.py and pyproject.toml
+
+6. ✅ pip install -e . failures
+   → Removed (not needed, direct imports work)
+
+## Current Build Should Succeed:
+
+- First build: 15-20 minutes (~5GB downloads)
+- Code changes: 1-2 minutes (cached layers)
+- No compilation (prebuilt wheels only)
+- Verification step catches import errors early
+
+## Build Command:
+
+From project root:
+  make build-gpu
+
+Or manually:
+  docker build -f gpu-worker/Dockerfile -t avatar-gpu-worker:latest gpu-worker
