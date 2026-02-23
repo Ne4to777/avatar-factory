@@ -95,9 +95,9 @@ class MuseTalkInference:
                 self.pe = models[2]
                 # V15 doesn't include audio_processor in load_all_model, create it manually
                 logger.info("Creating Audio2Feature for V15...")
-                self.audio_processor = Audio2Feature(model_path="./models/whisper/tiny.pt")
+                self.audio_processor = Audio2Feature(model_path="tiny")
                 self.audio_processor.model.to(self.device)
-                logger.info(f"Audio2Feature loaded with model_path='./models/whisper/tiny.pt' and moved to {self.device}")
+                logger.info(f"Audio2Feature loaded and moved to {self.device}")
             else:
                 raise ValueError(f"Unexpected number of models: {len(models)}")
             
