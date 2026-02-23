@@ -38,17 +38,8 @@ try:
     logger.info("Importing MuseTalk modules...")
     from musetalk.utils.utils import load_all_model, get_file_type, get_video_fps, datagen
     from musetalk.utils.preprocessing import get_landmark_and_bbox, read_imgs
-    
-    # Try to import get_image, provide fallback if not available
-    try:
-        from musetalk.utils.blending import get_image
-        logger.info("get_image imported from musetalk.utils.blending")
-    except (ImportError, AttributeError) as e:
-        logger.warning(f"Could not import get_image: {e}, using fallback implementation")
-        get_image = None
-    
     from musetalk.whisper.audio2feature import Audio2Feature
-    logger.info("MuseTalk modules imported successfully")
+    logger.info("MuseTalk base modules imported successfully")
 except ImportError as e:
     error_msg = f"Failed to import MuseTalk: {e}"
     logger.error(error_msg)
@@ -59,18 +50,42 @@ finally:
     os.chdir(original_cwd)
     logger.info(f"Restored working directory: {os.getcwd()}")
 
-# Fallback implementation of get_image if import failed
+# Define fallback blending function
 def blend_image_simple(background, foreground, bbox):
-    """Simple image blending fallback"""
+    """Simple image blending - paste foreground onto background at bbox location"""
     x1, y1, x2, y2 = bbox
     result = background.copy()
+    
+    # Ensure foreground matches bbox size
+    fg_h, fg_w = foreground.shape[:2]
+    bbox_h, bbox_w = y2 - y1, x2 - x1
+    
+    if fg_h != bbox_h or fg_w != bbox_w:
+        logger.warning(f"Foreground size {(fg_h, fg_w)} doesn't match bbox size {(bbox_h, bbox_w)}, resizing...")
+        foreground = cv2.resize(foreground, (bbox_w, bbox_h))
+    
     result[y1:y2, x1:x2] = foreground
     return result
 
-# Use fallback if get_image is None
-if get_image is None:
+# Try to import get_image from blending module, but always use fallback for now
+# (MuseTalk's get_image may have dependencies we don't have)
+get_image_imported = None
+try:
+    from musetalk.utils.blending import get_image as get_image_imported
+    logger.info(f"get_image imported from musetalk.utils.blending: {get_image_imported}")
+    
+    # Test if it's callable
+    if callable(get_image_imported):
+        logger.info("get_image is callable, will try to use it")
+        get_image = get_image_imported
+    else:
+        logger.warning(f"get_image is not callable: {type(get_image_imported)}, using fallback")
+        get_image = blend_image_simple
+except Exception as e:
+    logger.warning(f"Could not import/use get_image: {type(e).__name__}: {e}, using fallback")
     get_image = blend_image_simple
-    logger.info("Using fallback blend_image_simple function")
+
+logger.info(f"Using blend function: {get_image.__name__}")
 
 
 class MuseTalkInference:
