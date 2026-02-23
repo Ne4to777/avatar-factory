@@ -87,8 +87,9 @@ setup-docker:
 # 🎮 Build GPU Worker
 build-gpu:
 	@echo -e "$(BLUE)Building GPU Worker Docker image...$(NC)"
-	@echo -e "$(YELLOW)This may take 10-20 minutes on first build$(NC)"
-	docker build -f gpu-worker/Dockerfile -t avatar-gpu-worker:latest gpu-worker
+	@echo -e "$(YELLOW)First build: 15-20 minutes (~5GB downloads)$(NC)"
+	@echo -e "$(YELLOW)Cached build: 2-3 minutes (code changes only)$(NC)"
+	DOCKER_BUILDKIT=1 docker build -f gpu-worker/Dockerfile -t avatar-gpu-worker:latest gpu-worker
 	@echo -e "$(GREEN)✓ GPU Worker image built$(NC)"
 
 # 🚀 Start GPU Worker
