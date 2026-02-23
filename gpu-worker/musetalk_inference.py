@@ -38,7 +38,15 @@ try:
     logger.info("Importing MuseTalk modules...")
     from musetalk.utils.utils import load_all_model, get_file_type, get_video_fps, datagen
     from musetalk.utils.preprocessing import get_landmark_and_bbox, read_imgs
-    from musetalk.utils.blending import get_image
+    
+    # Try to import get_image, provide fallback if not available
+    try:
+        from musetalk.utils.blending import get_image
+        logger.info("get_image imported from musetalk.utils.blending")
+    except (ImportError, AttributeError) as e:
+        logger.warning(f"Could not import get_image: {e}, using fallback implementation")
+        get_image = None
+    
     from musetalk.whisper.audio2feature import Audio2Feature
     logger.info("MuseTalk modules imported successfully")
 except ImportError as e:
@@ -50,6 +58,19 @@ finally:
     # Restore original working directory
     os.chdir(original_cwd)
     logger.info(f"Restored working directory: {os.getcwd()}")
+
+# Fallback implementation of get_image if import failed
+def blend_image_simple(background, foreground, bbox):
+    """Simple image blending fallback"""
+    x1, y1, x2, y2 = bbox
+    result = background.copy()
+    result[y1:y2, x1:x2] = foreground
+    return result
+
+# Use fallback if get_image is None
+if get_image is None:
+    get_image = blend_image_simple
+    logger.info("Using fallback blend_image_simple function")
 
 
 class MuseTalkInference:
@@ -313,6 +334,7 @@ class MuseTalkInference:
             # Blend results back to original frames
             total_frames = len(res_frame_list)
             logger.info(f"Blending {total_frames} generated frames...")
+            logger.info(f"get_image function: {get_image}")
             blend_start = time.time()
             
             for i, res_frame in enumerate(res_frame_list):
@@ -324,12 +346,20 @@ class MuseTalkInference:
                 ori_frame = frame_list_cycle[i % len(frame_list_cycle)].copy()
                 x1, y1, x2, y2 = bbox
                 
+                # Resize res_frame to match bbox
                 res_frame = cv2.resize(
                     res_frame.astype(np.uint8),
                     (x2 - x1, y2 - y1)
                 )
                 
-                combine_frame = get_image(ori_frame, res_frame, bbox)
+                # Blend using get_image function
+                try:
+                    combine_frame = get_image(ori_frame, res_frame, bbox)
+                except Exception as e:
+                    logger.error(f"Blending failed for frame {i}: {type(e).__name__}: {e}")
+                    logger.error(f"  ori_frame shape: {ori_frame.shape}, res_frame shape: {res_frame.shape}, bbox: {bbox}")
+                    raise
+                
                 cv2.imwrite(str(result_dir / f"{i:08d}.png"), combine_frame)
             
             blend_time = time.time() - blend_start
