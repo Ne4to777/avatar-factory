@@ -67,16 +67,22 @@ if %errorLevel% equ 0 (
 ) else (
     echo %RED%  FAILED - GPU not available in Docker%NC%
     echo.
-    echo  Install NVIDIA Container Toolkit for Windows (WSL2):
-    echo  https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-on-wsl-2
+    echo  To enable GPU in Docker:
     echo.
-    echo  Quick install (in WSL):
-    echo    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey ^| sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-    echo    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list ^| sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' ^| sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    echo    sudo apt-get update
-    echo    sudo apt-get install -y nvidia-container-toolkit
-    echo    sudo nvidia-ctk runtime configure --runtime=docker
-    echo    sudo systemctl restart docker
+    echo  1. Open WSL terminal: wsl
+    echo  2. Run these Linux commands in WSL:
+    echo.
+    echo     curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey ^| sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    echo     distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+    echo     curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list ^| sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' ^| sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    echo     sudo apt-get update
+    echo     sudo apt-get install -y nvidia-container-toolkit
+    echo     sudo nvidia-ctk runtime configure --runtime=docker
+    echo     sudo systemctl restart docker
+    echo.
+    echo  3. Exit WSL: exit
+    echo.
+    echo  Full guide: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 )
 echo.
 
@@ -108,7 +114,7 @@ if %errorLevel% equ 0 (
         echo %GREEN%GPU Worker is running%NC%
         echo.
         echo Test server:
-        echo   curl http://localhost:8001/health
+        echo   powershell -Command "Invoke-RestMethod -Uri 'http://localhost:8001/health'"
     ) else (
         echo %YELLOW%GPU Worker container exists but is stopped%NC%
         echo.

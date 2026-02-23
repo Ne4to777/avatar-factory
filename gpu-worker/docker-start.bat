@@ -134,7 +134,10 @@ timeout /t 10 /nobreak >nul
 REM Check health
 echo.
 echo %YELLOW%Testing server health...%NC%
-curl -s http://localhost:8001/health >nul 2>&1
+
+REM Use PowerShell to check health (works without curl)
+powershell -Command "try { $response = Invoke-WebRequest -Uri 'http://localhost:8001/health' -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
+
 if %errorLevel% equ 0 (
     echo %GREEN%  Server is healthy!%NC%
     echo.
@@ -150,6 +153,9 @@ if %errorLevel% equ 0 (
     echo   Stop server:  docker-stop.bat
     echo   Restart:      docker-restart.bat
     echo.
+    echo Test API:
+    echo   powershell -Command "Invoke-RestMethod -Uri 'http://localhost:8001/health'"
+    echo.
 ) else (
     echo %YELLOW%  Server is starting... (may take 1-2 minutes)%NC%
     echo.
@@ -157,7 +163,7 @@ if %errorLevel% equ 0 (
     echo   docker logs -f avatar-gpu-worker
     echo.
     echo Check health when ready:
-    echo   curl http://localhost:8001/health
+    echo   powershell -Command "Invoke-RestMethod -Uri 'http://localhost:8001/health'"
     echo.
 )
 
