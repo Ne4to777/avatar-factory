@@ -1,11 +1,17 @@
 @echo off
-REM Fix setuptools for openmim
+REM Fix setuptools and openmim
 
 echo.
-echo Fixing setuptools...
+echo Fixing setuptools and openmim...
 echo.
 
+echo [1/2] Upgrading setuptools...
 venv\Scripts\pip.exe install --upgrade setuptools
+
+echo.
+echo [2/2] Reinstalling openmim...
+venv\Scripts\pip.exe uninstall openmim -y
+venv\Scripts\pip.exe install openmim
 
 echo.
 echo Done! Continue installation:
