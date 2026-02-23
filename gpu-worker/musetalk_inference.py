@@ -39,6 +39,7 @@ try:
     from musetalk.utils.utils import load_all_model, get_file_type, get_video_fps
     from musetalk.utils.preprocessing import get_landmark_and_bbox, read_imgs
     from musetalk.utils.blending import get_image
+    from musetalk.models.audio_processor import AudioProcessor
     logger.info("MuseTalk modules imported successfully")
 except ImportError as e:
     error_msg = f"Failed to import MuseTalk: {e}"
@@ -88,9 +89,13 @@ class MuseTalkInference:
                 self.audio_processor, self.vae, self.unet, self.pe = models
             elif len(models) == 3:
                 logger.info("MuseTalk V15 detected (3 models)")
-                # Try different order based on types
-                self.vae, self.unet, self.audio_processor = models
-                self.pe = None  # V15 doesn't use separate PE model
+                # V15 returns: VAE, UNet, PositionalEncoding
+                self.vae = models[0]
+                self.unet = models[1]
+                self.pe = models[2]
+                # V15 doesn't include audio_processor in load_all_model, create it manually
+                logger.info("Creating AudioProcessor for V15...")
+                self.audio_processor = AudioProcessor()
             else:
                 raise ValueError(f"Unexpected number of models: {len(models)}")
             
