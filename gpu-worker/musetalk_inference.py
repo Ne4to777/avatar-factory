@@ -219,9 +219,19 @@ class MuseTalkInference:
             
             gen = datagen(whisper_chunks, input_latent_list_cycle, batch_size)
             for i, (whisper_batch, latent_batch) in enumerate(gen):
-                # Follow exact same pattern as original inference.py
-                tensor_list = [torch.FloatTensor(arr) for arr in whisper_batch]
-                audio_feature_batch = torch.stack(tensor_list).to(self.unet.device)
+                logger.info(f"Batch {i}: whisper_batch type={type(whisper_batch)}, latent_batch type={type(latent_batch)}")
+                
+                # Handle both list of arrays (original) and tensor (from some datagen versions)
+                if isinstance(whisper_batch, list):
+                    # Original behavior: list of numpy arrays
+                    tensor_list = [torch.FloatTensor(arr) for arr in whisper_batch]
+                    audio_feature_batch = torch.stack(tensor_list).to(self.unet.device)
+                elif torch.is_tensor(whisper_batch):
+                    # Already a tensor
+                    audio_feature_batch = whisper_batch.to(self.unet.device)
+                else:
+                    raise TypeError(f"Unexpected whisper_batch type: {type(whisper_batch)}")
+                
                 audio_feature_batch = self.pe(audio_feature_batch)
                 
                 logger.info(f"Batch {i}: audio {audio_feature_batch.shape}, latent {latent_batch.shape}")
