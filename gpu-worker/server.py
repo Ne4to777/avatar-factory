@@ -51,37 +51,22 @@ try:
         logger.info("Adding torch.xpu stub (not present in PyTorch 2.1.0)")
         
         class XPUStub:
-            """Stub for Intel XPU API (not available in PyTorch 2.1.0)"""
-            @staticmethod
-            def is_available():
+            """Universal stub for Intel XPU API (not available in PyTorch 2.1.0)"""
+            
+            def is_available(self):
                 return False
             
-            @staticmethod
-            def device_count():
+            def device_count(self):
                 return 0
             
-            @staticmethod
-            def empty_cache():
-                pass  # No-op
-            
-            @staticmethod
-            def synchronize():
-                pass  # No-op
-            
-            @staticmethod
-            def current_device():
-                return 0
-            
-            @staticmethod
-            def get_device_name(device=None):
-                return "XPU (not available)"
-            
-            @staticmethod
-            def set_device(device):
-                pass  # No-op
+            def __getattr__(self, name):
+                """Catch-all for any XPU method - return no-op function"""
+                def noop(*args, **kwargs):
+                    return None
+                return noop
         
         torch.xpu = XPUStub()
-        logger.info("torch.xpu stub added successfully")
+        logger.info("torch.xpu stub added successfully (universal catch-all)")
     
 except Exception as e:
     logger.error(f"Failed to import PyTorch: {e}")
