@@ -6,13 +6,17 @@ FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 AS base
 # Set environment
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-ENV PYTHON_VERSION=3.10
+ENV PYTHON_VERSION=3.11
 
-# Install system dependencies
+# Install system dependencies including Python 3.11
 RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
     python${PYTHON_VERSION} \
-    python3-pip \
     python${PYTHON_VERSION}-venv \
+    python${PYTHON_VERSION}-dev \
+    python3-pip \
     git \
     wget \
     curl \
@@ -21,9 +25,10 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python as default
+# Set Python 3.11 as default
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1
 
@@ -39,9 +44,11 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA
+# Install PyTorch 2.7.0 with CUDA 11.8 (same as native setup)
 RUN pip install --no-cache-dir \
-    torch torchvision torchaudio \
+    torch==2.7.0+cu118 \
+    torchvision==0.22.0+cu118 \
+    torchaudio==2.7.0+cu118 \
     --index-url https://download.pytorch.org/whl/cu118
 
 # Install Python dependencies
@@ -52,6 +59,12 @@ RUN pip install --no-cache-dir -e .
 
 # Copy application code
 COPY . .
+
+# Install OpenMMLab packages (works fine in Docker/Linux)
+RUN pip install --no-cache-dir \
+    openmim \
+    && mim install mmcv \
+    && pip install --no-cache-dir mmdet mmpose
 
 # Setup MuseTalk
 RUN if [ ! -d "MuseTalk" ]; then \
