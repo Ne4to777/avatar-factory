@@ -118,6 +118,7 @@ app.add_middleware(
 musetalk_model = None
 sd_pipeline = None
 tts_model = None
+models_loaded = False  # Flag to prevent double loading
 
 def verify_api_key(x_api_key: str = Header()):
     """Проверка API ключа"""
@@ -127,7 +128,12 @@ def verify_api_key(x_api_key: str = Header()):
 @app.on_event("startup")
 async def load_models():
     """Загрузка AI моделей при старте сервера"""
-    global musetalk_model, sd_pipeline, tts_model
+    global musetalk_model, sd_pipeline, tts_model, models_loaded
+    
+    # Prevent double loading
+    if models_loaded:
+        logger.warning("Models already loaded, skipping...")
+        return
     
     logger.info("="*60)
     logger.info("STARTUP: Loading AI models...")
@@ -262,6 +268,9 @@ async def load_models():
         logger.info(f"Stable Diffusion XL: {'OK' if sd_pipeline else 'DISABLED'}")
         logger.info(f"Silero TTS: {'OK' if tts_model else 'DISABLED'}")
         logger.info("="*60)
+        
+        # Mark models as loaded
+        models_loaded = True
         
     except Exception as e:
         logger.error(f"Critical error during model loading: {type(e).__name__}: {e}")
@@ -491,11 +500,14 @@ if __name__ == "__main__":
         logger.info("Press Ctrl+C to stop")
         logger.info("="*60)
         
+        # Disable reload and workers to prevent double startup
         uvicorn.run(
             app,
             host=host,
             port=port,
-            log_level="info"
+            log_level="info",
+            reload=False,
+            workers=1
         )
     except KeyboardInterrupt:
         logger.info("\n" + "="*60)
