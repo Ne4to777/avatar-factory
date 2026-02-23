@@ -142,14 +142,19 @@ class MuseTalkInference:
         if not self.initialized:
             raise RuntimeError("MuseTalk not initialized")
         
+        import time
+        generation_start = time.time()
+        
         image_path = Path(image_path)
         audio_path = Path(audio_path)
         output_path = Path(output_path)
         
-        logger.info(f"Generating lip-sync video:")
+        logger.info("=" * 80)
+        logger.info("STARTING LIP-SYNC VIDEO GENERATION")
         logger.info(f"  Image: {image_path}")
         logger.info(f"  Audio: {audio_path}")
         logger.info(f"  Output: {output_path}")
+        logger.info("=" * 80)
         
         # Create temp directories
         temp_dir = Path("temp") / "musetalk"
@@ -243,11 +248,15 @@ class MuseTalkInference:
                 raise
             
             logger.info("Starting batch processing loop...")
+            import time
+            total_batches = (len(whisper_chunks_tensor) + batch_size - 1) // batch_size
+            logger.info(f"Total batches to process: {total_batches}")
+            
             try:
                 for i, (whisper_batch, latent_batch) in enumerate(gen):
-                    logger.info(f"=== Processing batch {i} ===")
-                    logger.info(f"whisper_batch: type={type(whisper_batch)}, shape={whisper_batch.shape if hasattr(whisper_batch, 'shape') else 'no shape'}")
-                    logger.info(f"latent_batch: type={type(latent_batch)}, shape={latent_batch.shape if hasattr(latent_batch, 'shape') else 'no shape'}")
+                    batch_start = time.time()
+                    progress_pct = ((i + 1) / total_batches) * 100
+                    logger.info(f"=== Batch {i+1}/{total_batches} ({progress_pct:.1f}%) ===")
                     
                     # datagen already returns tensors, just move to device
                     audio_feature_batch = whisper_batch.to(self.unet.device)
@@ -257,7 +266,8 @@ class MuseTalkInference:
                     if self.pe is not None:
                         audio_feature_batch = self.pe(audio_feature_batch)
                     
-                    logger.info(f"After PE - audio shape: {audio_feature_batch.shape}, latent shape: {latent_batch.shape}")
+                    logger.info(f"  → Running UNet inference...")
+                    unet_start = time.time()
                     
                     # Generate
                     pred_latents = self.unet.model(
@@ -266,11 +276,17 @@ class MuseTalkInference:
                         encoder_hidden_states=audio_feature_batch
                     ).sample
                     
-                    logger.info(f"Generated pred_latents shape: {pred_latents.shape}")
+                    unet_time = time.time() - unet_start
+                    logger.info(f"  → UNet done in {unet_time:.2f}s, decoding latents...")
+                    vae_start = time.time()
                     
                     # Decode latents to frames
                     recon = self.vae.decode_latents(pred_latents)
-                    logger.info(f"Decoded {len(recon)} frames")
+                    
+                    vae_time = time.time() - vae_start
+                    batch_time = time.time() - batch_start
+                    logger.info(f"  → VAE decoded {len(recon)} frames in {vae_time:.2f}s")
+                    logger.info(f"  → Batch {i+1} completed in {batch_time:.2f}s total")
                     
                     for res_frame in recon:
                         res_frame_list.append(res_frame)
@@ -282,8 +298,15 @@ class MuseTalkInference:
                 raise
             
             # Blend results back to original frames
-            logger.info("Blending generated frames...")
+            total_frames = len(res_frame_list)
+            logger.info(f"Blending {total_frames} generated frames...")
+            blend_start = time.time()
+            
             for i, res_frame in enumerate(res_frame_list):
+                if i % 5 == 0 or i == total_frames - 1:  # Log every 5 frames
+                    progress_pct = ((i + 1) / total_frames) * 100
+                    logger.info(f"  → Blending frame {i+1}/{total_frames} ({progress_pct:.1f}%)")
+                
                 bbox = coord_list_cycle[i % len(coord_list_cycle)]
                 ori_frame = frame_list_cycle[i % len(frame_list_cycle)].copy()
                 x1, y1, x2, y2 = bbox
@@ -296,8 +319,12 @@ class MuseTalkInference:
                 combine_frame = get_image(ori_frame, res_frame, bbox)
                 cv2.imwrite(str(result_dir / f"{i:08d}.png"), combine_frame)
             
+            blend_time = time.time() - blend_start
+            logger.info(f"Blending completed in {blend_time:.2f}s")
+            
             # Create video
             logger.info("Creating output video with ffmpeg...")
+            video_start = time.time()
             temp_video = temp_dir / "temp.mp4"
             
             # Check ffmpeg availability
@@ -311,27 +338,46 @@ class MuseTalkInference:
                     "  Or use: choco install ffmpeg (with Chocolatey)\n"
                 ) from e
             
+            logger.info(f"  → Step 1/2: Encoding frames to video (fps={fps})...")
             cmd_img2video = (
                 f"ffmpeg -y -v fatal -r {fps} -f image2 "
                 f"-i {result_dir}/%08d.png -vcodec libx264 "
                 f"-vf format=rgb24,scale=out_color_matrix=bt709,format=yuv420p "
                 f"-crf 18 {temp_video}"
             )
-            logger.info(f"Running: {cmd_img2video}")
+            
+            encode_start = time.time()
             result = os.system(cmd_img2video)
+            encode_time = time.time() - encode_start
+            
             if result != 0:
                 raise RuntimeError(f"ffmpeg frames-to-video failed with code {result}")
+            logger.info(f"  → Video encoded in {encode_time:.2f}s")
             
+            logger.info(f"  → Step 2/2: Merging audio...")
             cmd_combine_audio = (
                 f"ffmpeg -y -v fatal -i {audio_path} "
                 f"-i {temp_video} {output_path}"
             )
-            logger.info(f"Running: {cmd_combine_audio}")
+            
+            merge_start = time.time()
             result = os.system(cmd_combine_audio)
+            merge_time = time.time() - merge_start
+            
             if result != 0:
                 raise RuntimeError(f"ffmpeg audio merge failed with code {result}")
             
-            logger.info(f"Video generated successfully: {output_path}")
+            video_time = time.time() - video_start
+            logger.info(f"  → Audio merged in {merge_time:.2f}s")
+            logger.info(f"Video creation completed in {video_time:.2f}s total")
+            
+            total_time = time.time() - generation_start
+            logger.info("=" * 80)
+            logger.info(f"✅ VIDEO GENERATION COMPLETED SUCCESSFULLY")
+            logger.info(f"   Output: {output_path}")
+            logger.info(f"   Total time: {total_time:.2f}s ({total_time/60:.1f} minutes)")
+            logger.info("=" * 80)
+            
             return output_path
             
         finally:
