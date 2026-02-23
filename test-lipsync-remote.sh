@@ -16,9 +16,10 @@ if command -v convert &> /dev/null; then
     convert -size 512x512 xc:white -fill black -draw "circle 256,256 256,128" /tmp/test-face.jpg
     echo "✓ Test image created: /tmp/test-face.jpg"
 else
-    echo "✗ ImageMagick not found, downloading sample image..."
-    curl -s https://picsum.photos/512/512 -o /tmp/test-face.jpg
-    echo "✓ Test image downloaded"
+    echo "✗ ImageMagick not found, downloading sample face image..."
+    # Use AI-generated face (thispersondoesnotexist.com)
+    curl -s "https://thispersondoesnotexist.com/" -o /tmp/test-face.jpg
+    echo "✓ Test face image downloaded"
 fi
 echo ""
 

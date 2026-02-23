@@ -213,10 +213,19 @@ class MuseTalkInference:
             
             # Extract landmarks and preprocess
             logger.info("Extracting facial landmarks...")
-            coord_list, frame_list = get_landmark_and_bbox(
-                [str(p) for p in input_img_list],
-                bbox_shift
-            )
+            try:
+                coord_list, frame_list = get_landmark_and_bbox(
+                    [str(p) for p in input_img_list],
+                    bbox_shift
+                )
+            except (AttributeError, IndexError, TypeError) as e:
+                if "'NoneType' object has no attribute 'shape'" in str(e):
+                    raise RuntimeError(
+                        "No face detected in the image. "
+                        "Please use a clear frontal face photo. "
+                        "MuseTalk requires a visible human face to work."
+                    ) from e
+                raise
             
             # Validate results
             if not coord_list or not frame_list:
