@@ -200,7 +200,9 @@ class MuseTalkInference:
                     torch.FloatTensor(arr) for arr in whisper_batch
                 ]).to(self.unet.device)
                 
-                audio_feature_batch = self.pe(audio_feature_batch)
+                # Apply PE if available (V1 only, V15 has it built-in)
+                if self.pe is not None:
+                    audio_feature_batch = self.pe(audio_feature_batch)
                 
                 # Generate
                 pred_latents = self.unet.model(
