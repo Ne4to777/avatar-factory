@@ -225,11 +225,11 @@ class MuseTalkInference:
                     torch.FloatTensor(arr) for arr in whisper_batch
                 ]).to(self.unet.device)
                 
-                # Stack latent batch (each latent is a separate tensor, stack creates batch dimension)
+                # Concatenate latent batch (each latent already has batch dimension [1, 8, 32, 32])
                 if len(latent_batch_list) == 1:
-                    latent_batch = latent_batch_list[0].unsqueeze(0)  # Add batch dimension for single item
+                    latent_batch = latent_batch_list[0]  # Already has batch dimension
                 else:
-                    latent_batch = torch.stack(latent_batch_list, dim=0)
+                    latent_batch = torch.cat(latent_batch_list, dim=0)  # Concatenate along batch dim
                 
                 logger.info(f"Batch {i//batch_size}: audio shape {audio_feature_batch.shape}, latent shape {latent_batch.shape}")
                 
