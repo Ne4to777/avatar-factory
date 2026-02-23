@@ -28,6 +28,15 @@ echo [1/6] Checking conda...
 conda --version
 echo.
 
+REM Accept conda Terms of Service
+echo Accepting conda Terms of Service...
+echo yes | conda tos accept >nul 2>&1
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >nul 2>&1
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >nul 2>&1
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2 >nul 2>&1
+echo [OK] Terms accepted
+echo.
+
 REM Create conda environment
 echo [2/6] Creating conda environment 'avatar'...
 conda create -n avatar python=3.11 -y
