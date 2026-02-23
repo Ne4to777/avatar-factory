@@ -134,16 +134,31 @@ Dockerfile уже настроен и находится в `gpu-worker/Dockerfi
 ```dockerfile
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
-# Install Python 3.11
-RUN apt-get update && apt-get install -y python3.11 python3.11-venv git
+# Python 3.11 (same as native setup)
+ENV PYTHON_VERSION=3.11
 
-# Install MuseTalk with all dependencies (including mmpose)
-RUN pip install mmcv mmdet mmpose torch torchvision ...
+# Install Python 3.11 from deadsnakes PPA
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get install python3.11 python3.11-venv python3.11-dev
+
+# Install PyTorch 2.7.0 with CUDA 11.8
+RUN pip install torch==2.7.0+cu118 torchvision==0.22.0+cu118 torchaudio==2.7.0+cu118
+
+# Install OpenMMLab packages (works fine in Linux!)
+RUN pip install openmim && \
+    mim install mmcv && \
+    pip install mmdet mmpose
+
+# Install MuseTalk and all dependencies
+RUN git clone https://github.com/TMElyralab/MuseTalk.git && \
+    pip install -r musetalk-requirements.txt
 
 # ... rest of setup
 ```
 
-Всё работает из коробки!
+**Важно:** OpenMMLab пакеты (`mmcv`, `mmdet`, `mmpose`) устанавливаются **без проблем** в Linux/Docker!
+
+Всё работает из коробки! 🎉
 
 ---
 
