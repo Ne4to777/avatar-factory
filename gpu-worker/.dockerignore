@@ -1,0 +1,64 @@
+# Node modules (если делаете build из корня проекта)
+**/node_modules
+node_modules
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.pytest_cache
+.coverage
+
+# Models and checkpoints (скачаются при первом запуске)
+models/
+checkpoints/
+*.pth
+*.ckpt
+*.safetensors
+*.pt
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation and tests (не нужны в контейнере)
+*.md
+docs/
+test/
+tests/
+*.bat
+*.ps1
+
+# MuseTalk (клонируется в Dockerfile)
+MuseTalk/
+
+# Environment files
+.env
+.env.*
