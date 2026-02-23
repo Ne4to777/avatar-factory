@@ -17,6 +17,18 @@ if not exist venv\Scripts\python.exe (
     exit /b 1
 )
 
+echo Checking for existing server on port 8001...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8001 ^| findstr LISTENING') do (
+    echo Found process %%a on port 8001, killing it...
+    taskkill /F /PID %%a >nul 2>&1
+    if errorlevel 1 (
+        echo [WARNING] Could not kill process %%a
+    ) else (
+        echo Process %%a killed successfully
+    )
+)
+
+echo.
 echo Starting server on http://localhost:8001
 echo Press Ctrl+C to stop
 echo.
