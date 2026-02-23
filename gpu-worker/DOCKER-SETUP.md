@@ -29,6 +29,20 @@ MuseTalk требует `mmpose` с OpenMMLab зависимостями, кот
 
 ## 🚀 Быстрый старт
 
+### Доступные варианты
+
+**У нас есть 3 варианта Dockerfile:**
+
+| Файл | MuseTalk | Размер | Время сборки | Сложность |
+|------|----------|--------|--------------|-----------|
+| `Dockerfile` | ❌ Нет | ~5 GB | 10 мин | Легко |
+| `Dockerfile.conda` | ✅ **Да** | ~8 GB | 20 мин | **Рекомендуется** |
+| `Dockerfile.full` | ⚠️ Экспериментально | ~7 GB | 30 мин | Сложно |
+
+**Рекомендация:** Используйте `Dockerfile.conda` для полной функциональности!
+
+---
+
 ### 1️⃣ Установите Docker Desktop
 
 ```powershell
@@ -48,16 +62,30 @@ MuseTalk требует `mmpose` с OpenMMLab зависимостями, кот
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-### 3️⃣ Соберите и запустите контейнер
+### 3️⃣ Выберите вариант сборки
+
+#### Вариант A: С MuseTalk (Рекомендуется) ✅
 
 ```powershell
 cd C:\dev\avatar-factory\gpu-worker
 
-# Соберите образ (первый раз займёт 10-20 минут):
-docker build -t avatar-factory-gpu .
+# Соберите образ с Anaconda (включает MuseTalk):
+docker build -f Dockerfile.conda -t avatar-factory-gpu:full .
 
-# Запустите контейнер:
-docker run --gpus all -p 8001:8001 -v ${PWD}/.env:/app/.env avatar-factory-gpu
+# Запустите:
+docker run --gpus all -p 8001:8001 -v ${PWD}/.env:/app/.env avatar-factory-gpu:full
+```
+
+#### Вариант B: Без MuseTalk (Быстрее)
+
+```powershell
+cd C:\dev\avatar-factory\gpu-worker
+
+# Соберите базовый образ (без MuseTalk):
+docker build -t avatar-factory-gpu:lite .
+
+# Запустите:
+docker run --gpus all -p 8001:8001 -v ${PWD}/.env:/app/.env avatar-factory-gpu:lite
 ```
 
 ### 4️⃣ Проверьте работу
@@ -66,12 +94,24 @@ docker run --gpus all -p 8001:8001 -v ${PWD}/.env:/app/.env avatar-factory-gpu
 curl http://localhost:8001/health
 ```
 
-Должно быть:
+**С MuseTalk (Dockerfile.conda):**
 ```json
 {
   "status": "healthy",
   "models": {
-    "musetalk": true,
+    "musetalk": true,      ← Работает!
+    "stable_diffusion": true,
+    "silero_tts": true
+  }
+}
+```
+
+**Без MuseTalk (Dockerfile):**
+```json
+{
+  "status": "healthy",
+  "models": {
+    "musetalk": false,     ← Отключен
     "stable_diffusion": true,
     "silero_tts": true
   }

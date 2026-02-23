@@ -60,11 +60,16 @@ RUN pip install --no-cache-dir -e .
 # Copy application code
 COPY . .
 
-# Install OpenMMLab packages (works fine in Docker/Linux)
-RUN pip install --no-cache-dir \
-    openmim \
-    && mim install mmcv \
-    && pip install --no-cache-dir mmdet mmpose
+# NOTE: OpenMMLab packages (mmcv, mmdet, mmpose) are NOT installed by default
+# They have complex build dependencies that can cause Docker build failures
+# 
+# For full MuseTalk functionality with OpenMMLab, use one of these alternatives:
+# 1. Use pre-built OpenMMLab Docker image: openmmlab/mmdetection:latest
+# 2. Use Anaconda/Miniconda in container: conda install -c conda-forge mmcv mmdet mmpose
+# 3. Build in multi-stage with compilation tools (increases image size significantly)
+#
+# This basic image will run without MuseTalk (other models work fine)
+# See DOCKER-SETUP.md for full MuseTalk setup instructions
 
 # Setup MuseTalk
 RUN if [ ! -d "MuseTalk" ]; then \
