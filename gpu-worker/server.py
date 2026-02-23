@@ -318,9 +318,9 @@ async def text_to_speech(
     try:
         logger.info(f"TTS request: text='{text[:50]}...', speaker={speaker}")
         
-        # Генерация аудио (Silero TTS вызывается как функция, без именованных параметров)
+        # Генерация аудио через метод apply_tts
         sample_rate = 48000
-        audio = tts_model(text, speaker, sample_rate)
+        audio = tts_model.apply_tts(text=text, speaker=speaker, sample_rate=sample_rate)
         
         # Сохранение
         output_path = TEMP_DIR / f"tts_{os.urandom(8).hex()}.wav"
