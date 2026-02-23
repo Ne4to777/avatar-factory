@@ -1,5 +1,5 @@
 # Avatar Factory GPU Worker - Full MuseTalk Support via Anaconda
-# This Dockerfile uses Miniconda for reliable OpenMMLab installation
+# Optimized Docker image with PyTorch 2.7.0 + CUDA 11.8
 
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
@@ -60,13 +60,10 @@ RUN pip install --no-cache-dir -e .
 
 # Setup MuseTalk
 RUN if [ ! -d "MuseTalk" ]; then \
-    git clone https://github.com/TMElyralab/MuseTalk.git && \
-    pip install --no-cache-dir \
-        git+https://github.com/TMElyralab/MMCM.git@main \
-        git+https://github.com/TMElyralab/controlnet_aux.git@tme \
-        git+https://github.com/tencent-ailab/IP-Adapter.git@main \
-        git+https://github.com/openai/CLIP.git@main; \
+    git clone https://github.com/TMElyralab/MuseTalk.git; \
     fi
+# Note: MMCM, controlnet_aux, IP-Adapter, CLIP not in official requirements.txt
+# Only install if specific MuseTalk features require them
 
 # Create temp directory
 RUN mkdir -p /tmp/avatar-factory && chmod 777 /tmp/avatar-factory

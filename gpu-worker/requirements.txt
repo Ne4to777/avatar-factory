@@ -1,71 +1,71 @@
-# Core utilities (Python 3.11+)
+# ================================================================
+# Avatar Factory GPU Worker - Dependencies
+# Optimized for PyTorch 2.7.0 + CUDA 11.8
+# ================================================================
+
+# Core utilities
 setuptools>=69.0.0
 pip>=24.0
 wheel>=0.43.0
 
-# FastAPI Server (latest stable)
+# ----------------------------------------------------------------
+# FastAPI Server
+# ----------------------------------------------------------------
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
-python-multipart>=0.0.9
+python-multipart>=0.0.9  # File uploads
 
-# PyTorch 2.7.0 LTS (install separately with CUDA 11.8)
-# pip install torch==2.7.0+cu118 torchvision==0.19.0+cu118 torchaudio==2.7.0+cu118 --index-url https://download.pytorch.org/whl/cu118
-# Note: PyTorch 2.7 includes built-in SDPA (no xformers needed!)
+# ----------------------------------------------------------------
+# PyTorch (install separately via conda - see Dockerfile)
+# ----------------------------------------------------------------
+# conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8
 
-# AI Models (latest - fully compatible with PyTorch 2.7)
-diffusers>=0.30.0
-transformers>=4.41.0
-accelerate>=0.30.0
-safetensors>=0.4.3
-huggingface-hub>=0.23.0
-sentencepiece>=0.2.0
-protobuf>=5.27.0
+# ----------------------------------------------------------------
+# AI Models - Stable Diffusion XL
+# ----------------------------------------------------------------
+diffusers>=0.30.0        # Stable Diffusion XL pipeline
+transformers>=4.41.0     # Required by diffusers
+accelerate>=0.30.0       # Memory optimization
+safetensors>=0.4.3       # Safe model loading
+huggingface-hub>=0.23.0  # Model downloads
 
-# TensorFlow (required by MuseTalk)
-tensorflow>=2.12.0
+# ----------------------------------------------------------------
+# Audio Processing - Silero TTS
+# ----------------------------------------------------------------
+soundfile>=0.12.1  # Audio I/O
+librosa>=0.10.2    # Audio processing (MuseTalk)
 
-# Audio (latest stable)
-soundfile>=0.12.1
-librosa>=0.10.2
-pydub>=0.25.1
-resampy>=0.4.3
-numba>=0.59.0
+# ----------------------------------------------------------------
+# Image/Video Processing
+# ----------------------------------------------------------------
+opencv-python>=4.10.0  # Computer vision (MuseTalk)
+pillow>=10.3.0         # Image processing
+numpy>=1.26.4          # Array operations
 
-# Image Processing (latest)
-opencv-python>=4.10.0
-pillow>=10.3.0
-imageio>=2.34.0
-imageio-ffmpeg>=0.5.1
-scikit-image>=0.24.0
+# ----------------------------------------------------------------
+# MuseTalk Dependencies
+# ----------------------------------------------------------------
+# Note: MuseTalk cloned separately in Dockerfile
+einops>=0.8.0           # Tensor operations
+omegaconf>=2.3.0        # Config management
+ffmpeg-python>=0.2.0    # Video encoding
+moviepy>=1.0.3          # Video manipulation
 
-# Face Enhancement (latest)
-gfpgan>=1.3.8
-realesrgan>=0.3.0
-basicsr>=1.4.2
-facexlib>=0.3.0
+# ----------------------------------------------------------------
+# Optional: TensorFlow (listed in MuseTalk requirements.txt)
+# ----------------------------------------------------------------
+# tensorflow>=2.12.0
+# NOTE: Not used in our code. MuseTalk uses PyTorch-based Whisper.
+# Only include if needed for specific MuseTalk features.
 
-# UI (optional)
-gradio>=4.36.0
-
-# MuseTalk dependencies (will be added later in separate step)
-# mmpose, mmdet, mmcv require special installation
-
-# Utilities (latest stable)
-numpy>=1.26.4
-scipy>=1.13.0
-tqdm>=4.66.4
-omegaconf>=2.3.0
-einops>=0.8.0
-pyyaml>=6.0.1
-av>=12.0.0
-
-# MuseTalk specific
-ffmpeg-python>=0.2.0
-moviepy>=1.0.3
-gdown>=5.0.0
-
-# MuseTalk custom packages (install via git)
-# git+https://github.com/TMElyralab/MMCM.git@main
-# git+https://github.com/TMElyralab/controlnet_aux.git@tme
-# git+https://github.com/tencent-ailab/IP-Adapter.git@main
-# git+https://github.com/openai/CLIP.git@main
+# ================================================================
+# REMOVED DEPENDENCIES (not used in code):
+# ================================================================
+# - gfpgan, realesrgan, basicsr, facexlib (face enhancement - unused)
+# - gradio (UI - not needed for server)
+# - sentencepiece, protobuf (not needed for our models)
+# - pydub, resampy, numba (audio utils - unused)
+# - imageio, imageio-ffmpeg, scikit-image (image utils - unused)
+# - scipy, tqdm (not directly used)
+# - av, gdown (not used)
+# ================================================================
