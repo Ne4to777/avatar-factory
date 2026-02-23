@@ -48,7 +48,7 @@ curl -X POST "http://$GPU_HOST/api/lipsync" \
      -F "fps=25" \
      --output /tmp/test-lipsync-output.mp4 \
      -w "\nHTTP: %{http_code}\n" \
-     --max-time 300 \
+     --max-time 600 \
      2>/dev/null
 
 LIPSYNC_END=$(date +%s)

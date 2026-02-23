@@ -466,13 +466,17 @@ async def create_lipsync(
             fps=fps
         )
         
-        logger.info(f"[OK] Lip-sync video generated: {output_path}")
+        # Проверка размера видео
+        video_size_mb = output_path.stat().st_size / (1024 * 1024)
+        logger.info(f"[OK] Lip-sync video generated: {output_path.name}")
+        logger.info(f"    Size: {video_size_mb:.2f} MB")
         
         # Очистка входных файлов
         image_path.unlink()
         audio_path.unlink()
         logger.info("Cleaned up input files")
         
+        logger.info(f"Sending video file ({video_size_mb:.2f} MB) to client...")
         return FileResponse(output_path, media_type="video/mp4")
         
     except Exception as e:
