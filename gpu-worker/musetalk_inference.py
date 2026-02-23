@@ -172,11 +172,15 @@ class MuseTalkInference:
             
             # Process audio
             logger.info("Processing audio features...")
-            whisper_feature = self.audio_processor.audio2feat(str(audio_path))
-            whisper_chunks = self.audio_processor.feature2chunks(
-                feature_array=whisper_feature,
-                fps=fps
-            )
+            try:
+                whisper_feature = self.audio_processor.audio2feat(str(audio_path))
+                whisper_chunks = self.audio_processor.feature2chunks(
+                    feature_array=whisper_feature,
+                    fps=fps
+                )
+                logger.info(f"Audio processed: {len(whisper_chunks)} chunks")
+            except FileNotFoundError as e:
+                raise RuntimeError(f"Audio processing failed - ffmpeg not found in PATH: {e}") from e
             
             # Extract landmarks and preprocess
             logger.info("Extracting facial landmarks...")
@@ -244,8 +248,19 @@ class MuseTalkInference:
                 cv2.imwrite(str(result_dir / f"{i:08d}.png"), combine_frame)
             
             # Create video
-            logger.info("Creating output video...")
+            logger.info("Creating output video with ffmpeg...")
             temp_video = temp_dir / "temp.mp4"
+            
+            # Check ffmpeg availability
+            import subprocess
+            try:
+                subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+            except (FileNotFoundError, subprocess.CalledProcessError) as e:
+                raise RuntimeError(
+                    "ffmpeg not found. Please install ffmpeg and add to PATH:\n"
+                    "  Download from: https://ffmpeg.org/download.html\n"
+                    "  Or use: choco install ffmpeg (with Chocolatey)\n"
+                ) from e
             
             cmd_img2video = (
                 f"ffmpeg -y -v fatal -r {fps} -f image2 "
@@ -253,13 +268,19 @@ class MuseTalkInference:
                 f"-vf format=rgb24,scale=out_color_matrix=bt709,format=yuv420p "
                 f"-crf 18 {temp_video}"
             )
-            os.system(cmd_img2video)
+            logger.info(f"Running: {cmd_img2video}")
+            result = os.system(cmd_img2video)
+            if result != 0:
+                raise RuntimeError(f"ffmpeg frames-to-video failed with code {result}")
             
             cmd_combine_audio = (
                 f"ffmpeg -y -v fatal -i {audio_path} "
                 f"-i {temp_video} {output_path}"
             )
-            os.system(cmd_combine_audio)
+            logger.info(f"Running: {cmd_combine_audio}")
+            result = os.system(cmd_combine_audio)
+            if result != 0:
+                raise RuntimeError(f"ffmpeg audio merge failed with code {result}")
             
             logger.info(f"Video generated successfully: {output_path}")
             return output_path
