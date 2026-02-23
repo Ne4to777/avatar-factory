@@ -82,7 +82,8 @@ class MuseTalkInference:
                 self.audio_processor, self.vae, self.unet, self.pe = models
             elif len(models) == 3:
                 logger.info("MuseTalk V15 detected (3 models)")
-                self.audio_processor, self.vae, self.unet = models
+                # V15 order appears to be: vae, audio_processor, unet
+                self.vae, self.audio_processor, self.unet = models
                 self.pe = None  # V15 doesn't use separate PE model
             else:
                 raise ValueError(f"Unexpected number of models: {len(models)}")
