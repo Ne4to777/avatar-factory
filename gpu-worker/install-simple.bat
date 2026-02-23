@@ -19,6 +19,24 @@ if %errorLevel% neq 0 (
 python --version
 echo.
 
+REM Kill any Python processes that might block venv
+echo Checking for running Python processes...
+taskkill /F /IM python.exe >nul 2>&1
+timeout /t 1 /nobreak >nul
+
+REM Remove old venv if exists
+if exist venv (
+    echo Removing old venv...
+    rmdir /s /q venv 2>nul
+    if exist venv (
+        echo [WARNING] Cannot remove venv - files locked
+        echo Please close all Python programs and try again
+        pause
+        exit /b 1
+    )
+    timeout /t 2 /nobreak >nul
+)
+
 REM Create venv
 echo [1/4] Creating virtual environment...
 python -m venv venv

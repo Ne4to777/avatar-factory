@@ -1,0 +1,81 @@
+=========================================
+MANUAL INSTALLATION (Copy-Paste Commands)
+=========================================
+
+If all scripts fail, use these commands manually.
+
+Step 1: Open CMD or PowerShell
+-------------------------------
+Start Menu → "cmd" or "PowerShell"
+
+Step 2: Navigate to project
+----------------------------
+cd C:\dev\avatar-factory\gpu-worker
+
+(Replace with your actual path!)
+
+Step 3: Close all Python programs
+----------------------------------
+Close VSCode, PyCharm, Jupyter, etc.
+
+Step 4: Remove old venv
+-----------------------
+rmdir /s /q venv
+
+Step 5: Create new venv
+-----------------------
+python -m venv venv
+
+Step 6: Install PyTorch (~3GB, 5-10 minutes)
+--------------------------------------------
+venv\Scripts\pip.exe install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+Step 7: Install dependencies
+-----------------------------
+venv\Scripts\pip.exe install -r requirements.txt
+
+Step 8: Clone MuseTalk (optional)
+----------------------------------
+git clone https://github.com/TMElyralab/MuseTalk.git
+
+Step 9: Create .env file
+------------------------
+echo GPU_API_KEY=your-secret-key> .env
+echo HOST=0.0.0.0>> .env
+echo PORT=8001>> .env
+
+Step 10: Test GPU
+-----------------
+venv\Scripts\python.exe -c "import torch; print(f'CUDA: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
+
+Should show:
+  CUDA: True
+  GPU: NVIDIA GeForce RTX 4070 Ti
+
+Step 11: Start server
+---------------------
+venv\Scripts\python.exe server.py
+
+Open browser: http://localhost:8001/health
+
+=========================================
+TROUBLESHOOTING
+=========================================
+
+"Permission denied on venv"
+→ Close ALL Python programs
+→ rmdir /s /q venv
+→ Try again
+
+"Python not found"
+→ Install Python 3.11: https://www.python.org/downloads/
+→ Check "Add Python to PATH" during install
+
+"CUDA: False"
+→ Install CUDA 11.8: https://developer.nvidia.com/cuda-11-8-0-download-archive
+→ Update NVIDIA drivers
+
+"torch not found"
+→ Make sure you used the full pip command with --index-url
+
+=========================================
