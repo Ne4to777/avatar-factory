@@ -119,22 +119,21 @@ class GPUServerClient {
     }
 
     try {
-      const formData = new FormData();
-      formData.append('text', text.trim());
-      formData.append('language', language);
-      formData.append('speaker', speaker);
-      
       logger.info('TTS generation started', { 
         textLength: text.length,
         speaker,
         language 
       });
 
+      // GPU server expects query parameters, not FormData
       const response = await this.client.post(
         '/api/tts',
-        formData,
+        null,
         {
-          headers: formData.getHeaders(),
+          params: {
+            text: text.trim(),
+            speaker: speaker,
+          },
           responseType: 'arraybuffer',
         }
       );
@@ -228,21 +227,23 @@ class GPUServerClient {
     }
 
     try {
-      const formData = new FormData();
-      formData.append('prompt', prompt.trim());
-      formData.append('style', style);
-      
       logger.info('Background generation started', { 
         promptLength: prompt.length,
         style,
         dimensions: `${width}x${height}` 
       });
 
+      // GPU server expects query parameters for simple values
       const response = await this.client.post(
         '/api/generate-background',
-        formData,
+        null,
         {
-          headers: formData.getHeaders(),
+          params: {
+            prompt: prompt.trim(),
+            negative_prompt: "blurry, low quality, distorted",
+            width,
+            height,
+          },
           responseType: 'arraybuffer',
         }
       );
