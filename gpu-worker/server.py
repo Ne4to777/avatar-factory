@@ -452,6 +452,21 @@ async def cleanup_temp_files(x_api_key: str = Header()):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
+    import signal
+    
+    def signal_handler(sig, frame):
+        """Handle Ctrl+C gracefully"""
+        logger.info("\n" + "="*60)
+        logger.info("⚠️  Received shutdown signal (Ctrl+C)")
+        logger.info("Shutting down gracefully...")
+        logger.info("="*60)
+        sys.exit(0)
+    
+    # Register signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, signal_handler)
+    
     logger.info("="*60)
     logger.info("MAIN: Server startup initiated")
     logger.info("="*60)
@@ -473,6 +488,7 @@ if __name__ == "__main__":
         logger.info("uvicorn imported")
         
         logger.info(f"Starting uvicorn server on {host}:{port}")
+        logger.info("Press Ctrl+C to stop")
         logger.info("="*60)
         
         uvicorn.run(
@@ -481,6 +497,12 @@ if __name__ == "__main__":
             port=port,
             log_level="info"
         )
+    except KeyboardInterrupt:
+        logger.info("\n" + "="*60)
+        logger.info("⚠️  Received KeyboardInterrupt")
+        logger.info("Server stopped by user")
+        logger.info("="*60)
+        sys.exit(0)
     except Exception as e:
         logger.error(f"FATAL ERROR: {type(e).__name__}: {e}")
         logger.error("Full traceback:", exc_info=True)
