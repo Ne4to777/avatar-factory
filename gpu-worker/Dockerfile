@@ -40,15 +40,11 @@ SHELL ["conda", "run", "-n", "avatar", "/bin/bash", "-c"]
 # Install PyTorch with CUDA
 RUN conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
-# Install build dependencies first
-RUN pip install --no-cache-dir setuptools wheel
+# Install build dependencies
+RUN pip install --no-cache-dir setuptools wheel pip
 
-# Install OpenMMLab packages via pip (prebuilt wheels)
-RUN pip install --no-cache-dir \
-    mmengine==0.10.3 \
-    mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.1/index.html \
-    mmdet==3.3.0 \
-    mmpose==1.3.1
+# Note: mmcv, mmdet, mmpose are optional for MuseTalk
+# They will be installed on-demand if needed at runtime
 
 WORKDIR /app
 
