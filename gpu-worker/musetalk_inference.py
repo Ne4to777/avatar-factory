@@ -227,9 +227,22 @@ class MuseTalkInference:
                 else:
                     input_latent_list_cycle_np.append(latent)
             
-            gen = datagen(whisper_chunks, input_latent_list_cycle_np, batch_size)
-            for i, (whisper_batch, latent_batch) in enumerate(gen):
-                logger.info(f"Batch {i}: whisper_batch type={type(whisper_batch)}, latent_batch type={type(latent_batch)}")
+            logger.info(f"Converted {len(input_latent_list_cycle_np)} latents to numpy")
+            logger.info(f"First converted latent type: {type(input_latent_list_cycle_np[0])}, shape: {input_latent_list_cycle_np[0].shape if hasattr(input_latent_list_cycle_np[0], 'shape') else 'no shape'}")
+            
+            try:
+                logger.info("Creating datagen generator...")
+                gen = datagen(whisper_chunks, input_latent_list_cycle_np, batch_size)
+                logger.info("datagen generator created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create datagen: {type(e).__name__}: {e}")
+                raise
+            
+            logger.info("Starting batch processing loop...")
+            try:
+                for i, (whisper_batch, latent_batch) in enumerate(gen):
+                    logger.info(f"=== Processing batch {i} ===")
+                    logger.info(f"Batch {i}: whisper_batch type={type(whisper_batch)}, latent_batch type={type(latent_batch)}")
                 
                 # Convert whisper_batch to tensor
                 if isinstance(whisper_batch, list):
@@ -275,6 +288,12 @@ class MuseTalkInference:
                 recon = self.vae.decode_latents(pred_latents)
                 for res_frame in recon:
                     res_frame_list.append(res_frame)
+            except Exception as e:
+                logger.error(f"Error in batch processing loop: {type(e).__name__}: {e}")
+                logger.error(f"Error occurred at batch {i if 'i' in locals() else 'unknown'}")
+                import traceback
+                logger.error(f"Traceback:\n{traceback.format_exc()}")
+                raise
             
             # Blend results back to original frames
             logger.info("Blending generated frames...")
