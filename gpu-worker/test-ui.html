@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar Factory GPU Worker - Test UI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .status {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .status h2 { margin-bottom: 15px; color: #333; }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .status-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status-item label { display: block; color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .status-item .value { font-size: 1.2em; font-weight: bold; color: #333; }
+        .status-item.ok .value { color: #28a745; }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            display: none;
+        }
+        .result.show { display: block; }
+        .result audio, .result img, .result video {
+            max-width: 100%;
+            margin-top: 10px;
+            border-radius: 6px;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #28a745;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Avatar Factory GPU Worker</h1>
+        
+        <div class="status">
+            <h2>Server Status</h2>
+            <div class="status-grid" id="status">
+                <div class="status-item">
+                    <label>Connection</label>
+                    <div class="value">Checking...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cards">
+            <!-- TTS Card -->
+            <div class="card">
+                <h2>🎤 Text-to-Speech (Silero TTS)</h2>
+                <div class="form-group">
+                    <label>Text (Russian):</label>
+                    <textarea id="tts-text">Привет! Это тестовое сообщение для проверки синтеза речи.</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Speaker:</label>
+                    <select id="tts-speaker">
+                        <option value="xenia">Xenia (Female)</option>
+                        <option value="baya">Baya (Female)</option>
+                        <option value="kseniya">Kseniya (Female)</option>
+                        <option value="eugene">Eugene (Male)</option>
+                    </select>
+                </div>
+                <button onclick="generateTTS()">Generate Speech</button>
+                <div class="result" id="tts-result"></div>
+            </div>
+
+            <!-- Background Card -->
+            <div class="card">
+                <h2>🎨 Background Generation (SDXL)</h2>
+                <div class="form-group">
+                    <label>Prompt:</label>
+                    <textarea id="bg-prompt">Modern office with large windows, natural lighting, minimal design, professional workspace</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Negative Prompt (optional):</label>
+                    <input type="text" id="bg-negative" value="blurry, low quality, distorted">
+                </div>
+                <button onclick="generateBackground()">Generate Background</button>
+                <div class="result" id="bg-result"></div>
+            </div>
+
+            <!-- Lip-Sync Card -->
+            <div class="card">
+                <h2>💬 Lip-Sync Video (MuseTalk)</h2>
+                <div class="form-group">
+                    <label>Avatar Image:</label>
+                    <input type="file" id="lipsync-image" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>Audio File:</label>
+                    <input type="file" id="lipsync-audio" accept="audio/*">
+                </div>
+                <div class="form-group">
+                    <label>FPS:</label>
+                    <input type="number" id="lipsync-fps" value="25" min="10" max="60">
+                </div>
+                <button onclick="generateLipSync()">Generate Video</button>
+                <div class="result" id="lipsync-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8001';
+        const API_KEY = 'your-secret-gpu-key-change-this';
+
+        // Check server status
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('status');
+                statusDiv.innerHTML = `
+                    <div class="status-item ok">
+                        <label>Connection</label>
+                        <div class="value">✓ Connected</div>
+                    </div>
+                    <div class="status-item ${data.models.musetalk ? 'ok' : ''}">
+                        <label>MuseTalk</label>
+                        <div class="value">${data.models.musetalk ? '✓ Ready' : '✗ Disabled'}</div>
+                    </div>
+                    <div class="status-item ${data.models.stable_diffusion ? 'ok' : ''}">
+                        <label>Stable Diffusion</label>
+                        <div class="value">${data.models.stable_diffusion ? '✓ Ready' : '✗ Disabled'}</div>
+                    </div>
+                    <div class="status-item ${data.models.silero_tts ? 'ok' : ''}">
+                        <label>Silero TTS</label>
+                        <div class="value">${data.models.silero_tts ? '✓ Ready' : '✗ Disabled'}</div>
+                    </div>
+                    <div class="status-item">
+                        <label>GPU</label>
+                        <div class="value">${data.gpu.name}</div>
+                    </div>
+                    <div class="status-item">
+                        <label>VRAM</label>
+                        <div class="value">${data.gpu.vram_used_gb.toFixed(1)}/${data.gpu.vram_total_gb.toFixed(1)} GB</div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('status').innerHTML = `
+                    <div class="status-item">
+                        <label>Connection</label>
+                        <div class="value" style="color: #dc3545;">✗ Error</div>
+                    </div>
+                `;
+            }
+        }
+
+        // TTS
+        async function generateTTS() {
+            const text = document.getElementById('tts-text').value;
+            const speaker = document.getElementById('tts-speaker').value;
+            const resultDiv = document.getElementById('tts-result');
+            
+            resultDiv.innerHTML = '<div class="loading">Generating speech...</div>';
+            resultDiv.classList.add('show');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/tts?text=${encodeURIComponent(text)}&speaker=${speaker}`, {
+                    method: 'POST',
+                    headers: { 'x-api-key': API_KEY }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Generated successfully!</div>
+                    <audio controls src="${url}"></audio>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Background Generation
+        async function generateBackground() {
+            const prompt = document.getElementById('bg-prompt').value;
+            const negative = document.getElementById('bg-negative').value;
+            const resultDiv = document.getElementById('bg-result');
+            
+            resultDiv.innerHTML = '<div class="loading">Generating background... (30-60 seconds)</div>';
+            resultDiv.classList.add('show');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/background`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        negative_prompt: negative,
+                        steps: 30
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Generated successfully!</div>
+                    <img src="${url}" alt="Generated background">
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Lip-Sync
+        async function generateLipSync() {
+            const imageFile = document.getElementById('lipsync-image').files[0];
+            const audioFile = document.getElementById('lipsync-audio').files[0];
+            const fps = document.getElementById('lipsync-fps').value;
+            const resultDiv = document.getElementById('lipsync-result');
+            
+            if (!imageFile || !audioFile) {
+                resultDiv.innerHTML = '<div class="error">Please select both image and audio files</div>';
+                resultDiv.classList.add('show');
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="loading">Generating lip-sync video... (60-120 seconds)</div>';
+            resultDiv.classList.add('show');
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                formData.append('audio', audioFile);
+                formData.append('fps', fps);
+                
+                const response = await fetch(`${API_URL}/api/lipsync`, {
+                    method: 'POST',
+                    headers: { 'x-api-key': API_KEY },
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Generated successfully!</div>
+                    <video controls src="${url}"></video>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Check status on load
+        checkStatus();
+        setInterval(checkStatus, 10000); // Update every 10 seconds
+    </script>
+</body>
+</html>
