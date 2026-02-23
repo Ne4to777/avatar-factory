@@ -39,9 +39,9 @@ librosa>=0.10.2    # Audio processing (MuseTalk)
 # ----------------------------------------------------------------
 # Image/Video Processing
 # ----------------------------------------------------------------
-opencv-python>=4.10.0  # Computer vision (MuseTalk)
-pillow>=10.3.0         # Image processing
 numpy>=1.26.4,<2.0.0   # Array operations (PyTorch 2.1.0 requires NumPy 1.x)
+opencv-python>=4.8.0,<4.10.0  # Computer vision (MuseTalk) - 4.10+ requires NumPy 2.x
+pillow>=10.3.0         # Image processing
 
 # ----------------------------------------------------------------
 # MuseTalk Dependencies
