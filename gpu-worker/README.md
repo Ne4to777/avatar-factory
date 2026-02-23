@@ -101,7 +101,7 @@
 | **Real-ESRGAN** | Улучшение качества |
 | **FFmpeg** | Обработка видео |
 
-**Примечание:** MuseTalk устанавливается отдельно через `install-musetalk.ps1` после основной установки.
+**Примечание:** Для MuseTalk используйте Docker (см. раздел 6).
 
 ## 5. Конфигурация
 
@@ -122,34 +122,20 @@ GPU_API_KEY=<ваш ключ из gpu-worker>
 
 Узнать IP ПК: `ipconfig` (Windows) или `ifconfig` (macOS/Linux).
 
-## 6. Установка MuseTalk (lip-sync)
+## 6. Docker (рекомендуется для MuseTalk)
 
-После основной установки нужно установить MuseTalk для lip-sync анимации:
+MuseTalk требует OpenMMLab пакеты (mmcv, mmpose) которые сложно установить на Windows.
+**Используйте Docker:**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File install-musetalk.ps1
+cd gpu-worker
+docker build -t avatar-gpu .
+docker run --gpus all -p 8001:8001 -v ${PWD}/.env:/app/.env avatar-gpu
 ```
 
-Этот скрипт:
+Docker образ включает Python 3.11 + PyTorch 2.7.0 + все зависимости + MuseTalk.
 
-- Клонирует репозиторий MuseTalk (~200 MB)
-- Устанавливает дополнительные зависимости (ffmpeg-python, moviepy и др.)
-- Скачивает модели MuseTalk из HuggingFace (~2 GB)
-- Устанавливает custom packages (MMCM, controlnet_aux, IP-Adapter, CLIP)
-
-**Время установки:** 5–15 минут (в зависимости от скорости интернета).
-
-**Важно:** MuseTalk устанавливается отдельно, так как имеет дополнительные зависимости (mmcv-lite, mmpose, mmdet) которые могут конфликтовать с основными пакетами. Установка через `install-musetalk.ps1` гарантирует совместимость.
-
-**Альтернатива:** Если автоматическая загрузка не работает, можно скачать модели вручную. Смотрите [MANUAL-DOWNLOAD-MUSETALK.md](MANUAL-DOWNLOAD-MUSETALK.md).
-
-Проверить установку:
-
-```cmd
-venv\Scripts\python.exe -c "from musetalk_inference import test_musetalk; test_musetalk()"
-```
-
-Если видите `[OK] MuseTalk initialized successfully!`, всё готово.
+**Без Docker:** Сервер работает, но lip-sync отключен (только TTS + Stable Diffusion).
 
 ## 7. Запуск сервера
 
@@ -180,11 +166,7 @@ python server.py
 [>] Starting GPU Server on 0.0.0.0:8001
 ```
 
-**Важно:** Если MuseTalk показывает `DISABLED`, запустите установку:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File install-musetalk.ps1
-```
+**Важно:** Если MuseTalk показывает `DISABLED`, используйте Docker (см. раздел 6).
 
 ### Windows Service (автозапуск)
 
@@ -310,14 +292,9 @@ start.bat
 
 ### MuseTalk показывает DISABLED
 
-**Причина:** MuseTalk не установлен
+**Причина:** MuseTalk не установлен (требует OpenMMLab пакеты)
 
-**Решение:**
-```powershell
-powershell -ExecutionPolicy Bypass -File install-musetalk.ps1
-```
-
-После установки перезапустите сервер.
+**Решение:** Используйте Docker (см. раздел 6).
 
 ### Тестирование компонентов
 
@@ -344,9 +321,10 @@ test-components.bat
 3. Активируйте: `venv\Scripts\activate`
 4. PyTorch 2.7.0: `pip install torch==2.7.0+cu118 torchvision==0.22.0+cu118 torchaudio==2.7.0+cu118 --index-url https://download.pytorch.org/whl/cu118`
 5. Зависимости: `pip install -r requirements.txt`
-6. MuseTalk: запустите `powershell -ExecutionPolicy Bypass -File install-musetalk.ps1`
-7. Модели: `python download_models.py`
-8. `.env`: скопируйте из примера и задайте `GPU_API_KEY`
+6. Модели: `python download_models.py`
+7. `.env`: скопируйте из примера и задайте `GPU_API_KEY`
+
+**Примечание:** MuseTalk не работает через pip на Windows. Используйте Docker.
 
 **Linux/macOS:**
 
