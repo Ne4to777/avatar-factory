@@ -312,6 +312,79 @@ async def health():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/diagnostics")
+async def diagnostics(x_api_key: str = Header()):
+    """Полная диагностика системы для анализа"""
+    verify_api_key(x_api_key)
+    
+    import subprocess
+    import platform
+    
+    diagnostics_info = {
+        "system": {
+            "os": platform.system(),
+            "os_version": platform.version(),
+            "python_version": platform.python_version(),
+            "cuda_available": torch.cuda.is_available(),
+        },
+        "dependencies": {
+            "torch_version": torch.__version__,
+            "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
+        },
+        "models": {
+            "musetalk_loaded": musetalk_model is not None,
+            "stable_diffusion_loaded": sd_pipeline is not None,
+            "silero_tts_loaded": tts_model is not None,
+        },
+        "paths": {
+            "temp_dir": str(TEMP_DIR),
+            "temp_dir_exists": TEMP_DIR.exists(),
+            "cwd": os.getcwd(),
+        }
+    }
+    
+    # Check ffmpeg
+    try:
+        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, timeout=5)
+        diagnostics_info["ffmpeg"] = {
+            "available": result.returncode == 0,
+            "version": result.stdout.split('\n')[0] if result.returncode == 0 else None
+        }
+    except Exception as e:
+        diagnostics_info["ffmpeg"] = {
+            "available": False,
+            "error": str(e)
+        }
+    
+    # Check disk space
+    if TEMP_DIR.exists():
+        import shutil
+        try:
+            disk_usage = shutil.disk_usage(TEMP_DIR)
+            diagnostics_info["disk_space"] = {
+                "total_gb": round(disk_usage.total / 1e9, 2),
+                "used_gb": round(disk_usage.used / 1e9, 2),
+                "free_gb": round(disk_usage.free / 1e9, 2),
+            }
+        except Exception as e:
+            diagnostics_info["disk_space"] = {"error": str(e)}
+    
+    # List recent temp files
+    try:
+        temp_files = []
+        if TEMP_DIR.exists():
+            for f in sorted(TEMP_DIR.glob("*.*"), key=lambda x: x.stat().st_mtime, reverse=True)[:10]:
+                temp_files.append({
+                    "name": f.name,
+                    "size_kb": round(f.stat().st_size / 1024, 2),
+                    "modified": f.stat().st_mtime
+                })
+        diagnostics_info["recent_temp_files"] = temp_files
+    except Exception as e:
+        diagnostics_info["recent_temp_files"] = {"error": str(e)}
+    
+    return diagnostics_info
+
 @app.post("/api/tts")
 async def text_to_speech(
     text: str = Query(..., description="Text to synthesize"),
