@@ -11,7 +11,7 @@ export default function HomePage() {
   const [text, setText] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
-  const [backgroundStyle, setBackgroundStyle] = useState('modern-office');
+  const [backgroundStyle, setBackgroundStyle] = useState('professional');
   const [format, setFormat] = useState<'VERTICAL' | 'HORIZONTAL' | 'SQUARE'>('VERTICAL');
   const [voiceId, setVoiceId] = useState('ru_speaker_female');
   
@@ -207,14 +207,10 @@ export default function HomePage() {
                 onChange={(e) => setBackgroundStyle(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
               >
-                <option value="modern-office">Офис</option>
-                <option value="cozy-home">Уютный дом</option>
-                <option value="outdoor-nature">Природа</option>
-                <option value="tech-studio">Тех студия</option>
-                <option value="cafe">Кафе</option>
-                <option value="library">Библиотека</option>
-                <option value="beach">Пляж</option>
-                <option value="city">Город</option>
+                <option value="simple">Простой</option>
+                <option value="professional">Профессиональный</option>
+                <option value="creative">Креативный</option>
+                <option value="minimalist">Минималистичный</option>
               </select>
             </div>
             
