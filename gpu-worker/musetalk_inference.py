@@ -215,15 +215,25 @@ class MuseTalkInference:
             
             # Generate lip-synced frames using datagen (exactly as in original inference.py)
             logger.info(f"Generating {len(whisper_chunks)} frames...")
+            logger.info(f"whisper_chunks type: {type(whisper_chunks)}, first chunk type: {type(whisper_chunks[0])}")
+            logger.info(f"input_latent_list_cycle type: {type(input_latent_list_cycle)}, first latent type: {type(input_latent_list_cycle[0])}")
             res_frame_list = []
             
-            gen = datagen(whisper_chunks, input_latent_list_cycle, batch_size)
+            # datagen expects numpy arrays, not tensors - convert latents back to numpy if needed
+            input_latent_list_cycle_np = []
+            for latent in input_latent_list_cycle:
+                if isinstance(latent, torch.Tensor):
+                    input_latent_list_cycle_np.append(latent.cpu().numpy())
+                else:
+                    input_latent_list_cycle_np.append(latent)
+            
+            gen = datagen(whisper_chunks, input_latent_list_cycle_np, batch_size)
             for i, (whisper_batch, latent_batch) in enumerate(gen):
                 logger.info(f"Batch {i}: whisper_batch type={type(whisper_batch)}, latent_batch type={type(latent_batch)}")
                 
-                # Handle both list of arrays (original) and tensor (from some datagen versions)
+                # Convert whisper_batch to tensor
                 if isinstance(whisper_batch, list):
-                    # Original behavior: list of numpy arrays
+                    # List of numpy arrays
                     tensor_list = [torch.FloatTensor(arr) for arr in whisper_batch]
                     audio_feature_batch = torch.stack(tensor_list).to(self.unet.device)
                 elif torch.is_tensor(whisper_batch):
@@ -232,7 +242,15 @@ class MuseTalkInference:
                 else:
                     raise TypeError(f"Unexpected whisper_batch type: {type(whisper_batch)}")
                 
-                audio_feature_batch = self.pe(audio_feature_batch)
+                # Convert latent_batch to tensor if needed
+                if not torch.is_tensor(latent_batch):
+                    latent_batch = torch.FloatTensor(latent_batch).to(self.unet.device)
+                else:
+                    latent_batch = latent_batch.to(self.unet.device)
+                
+                # Apply PE (V15 has it, V1 uses separate pe model)
+                if self.pe is not None:
+                    audio_feature_batch = self.pe(audio_feature_batch)
                 
                 logger.info(f"Batch {i}: audio {audio_feature_batch.shape}, latent {latent_batch.shape}")
                 
