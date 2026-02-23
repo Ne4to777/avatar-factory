@@ -117,13 +117,26 @@ Write-Host "[i] Installing OpenMMLab packages (mmcv, mmdet, mmpose)..."
 Write-Host "    This may take 5-10 minutes (compiling C++ extensions)..."
 Write-Host ""
 
-# Skip OpenMMLab packages - they have complex dependencies and may not be needed
-Write-Host "[i] Skipping OpenMMLab packages (mmcv, mmdet, mmpose)"
-Write-Host "    These are optional for MuseTalk inference"
-Write-Host "    If MuseTalk fails to load, we'll add them back"
+# Skip OpenMMLab packages - use fallback face detection instead
+Write-Host "[i] OpenMMLab packages (mmpose, mmdet, mmcv) are skipped"
+Write-Host "    These have complex build dependencies on Windows"
+Write-Host "    Using fallback face detection with mediapipe instead"
 Write-Host ""
 
-Write-ColorMsg "[OK] OpenMMLab packages installed" Green
+# Install mediapipe as lightweight alternative to mmpose
+Write-Host "[i] Installing mediapipe (lightweight face/pose detection)..."
+& $venvPython -m pip install mediapipe --quiet
+
+if ($LASTEXITCODE -eq 0) {
+    Write-ColorMsg "    [OK] mediapipe installed successfully" Green
+    Write-Host "    This will be used for face detection in MuseTalk"
+} else {
+    Write-ColorMsg "    [ERROR] Failed to install mediapipe" Red
+    Write-Host "    MuseTalk may not work properly"
+}
+
+Write-Host ""
+Write-ColorMsg "[OK] Face detection setup complete" Green
 Write-Host ""
 
 Write-Host "[i] Installing MuseTalk custom packages..."
@@ -290,9 +303,27 @@ Write-Host "============================================================"
 Write-ColorMsg "[OK] MuseTalk Installation Complete!" Green
 Write-Host "============================================================"
 Write-Host ""
+Write-Host "IMPORTANT: MuseTalk requires mmpose which has complex dependencies"
+Write-Host ""
+Write-ColorMsg "[!] MuseTalk will NOT work without mmpose!" Yellow
+Write-Host ""
+Write-Host "Recommended solutions:"
+Write-Host "  1. Use Docker (easiest): docker-compose up"
+Write-Host "  2. Use Anaconda/Miniconda:"
+Write-Host "     conda create -n avatar python=3.11"
+Write-Host "     conda activate avatar"
+Write-Host "     conda install -c conda-forge mmpose"
+Write-Host "  3. Manual install pre-built wheels (advanced)"
+Write-Host ""
+Write-Host "For now, the server will run without lip-sync functionality."
+Write-Host "Other models (Stable Diffusion, TTS) will work normally."
+Write-Host ""
 Write-Host "Next steps:"
-Write-Host "  1. Restart server: .\start.bat"
-Write-Host "  2. Test lip-sync API: curl -X POST http://localhost:8001/api/lipsync"
+Write-Host "  1. Start server: .\start.bat"
+Write-Host "  2. Check health: curl http://localhost:8001/health"
+Write-Host "     Expected: {\"musetalk\": false, ...}"
+Write-Host ""
+Write-Host "See README.md for Docker setup instructions"
 Write-Host ""
 Write-Host "Press any key to exit..."
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
