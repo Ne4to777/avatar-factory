@@ -28,7 +28,7 @@ diffusers==0.25.1        # Stable Diffusion XL pipeline (compatible with PyTorch
 transformers==4.36.2     # Required by diffusers (compatible with PyTorch 2.1.0)
 accelerate==0.25.0       # Memory optimization
 safetensors>=0.4.3       # Safe model loading
-huggingface-hub>=0.23.0  # Model downloads
+huggingface-hub==0.20.3  # Model downloads (has cached_download for MuseTalk)
 
 # ----------------------------------------------------------------
 # Audio Processing - Silero TTS
