@@ -204,6 +204,8 @@ class MuseTalkInference:
                 latents = self.vae.get_latents_for_unet(crop_frame)
                 input_latent_list.append(latents)
             
+            logger.info(f"Latents prepared: {len(input_latent_list)} items, first latent type: {type(input_latent_list[0])}, shape: {input_latent_list[0].shape if hasattr(input_latent_list[0], 'shape') else 'no shape'}")
+            
             # Create cycle for smooth animation
             frame_list_cycle = frame_list + frame_list[::-1]
             coord_list_cycle = coord_list + coord_list[::-1]
@@ -216,12 +218,15 @@ class MuseTalkInference:
             for i in range(0, len(whisper_chunks), batch_size):
                 batch_end = min(i + batch_size, len(whisper_chunks))
                 whisper_batch = whisper_chunks[i:batch_end]
-                latent_batch = input_latent_list_cycle[i:batch_end]
+                latent_batch_list = input_latent_list_cycle[i:batch_end]
                 
                 # Convert to tensors
                 audio_feature_batch = torch.stack([
                     torch.FloatTensor(arr) for arr in whisper_batch
                 ]).to(self.unet.device)
+                
+                # Convert latent batch to tensor (they are individual tensors)
+                latent_batch = torch.cat(latent_batch_list, dim=0)
                 
                 # Apply PE if available (V1 only, V15 has it built-in)
                 if self.pe is not None:
