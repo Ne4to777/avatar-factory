@@ -174,11 +174,13 @@ class MuseTalkInference:
             logger.info("Processing audio features...")
             try:
                 whisper_feature = self.audio_processor.audio2feat(str(audio_path))
+                logger.info(f"whisper_feature type: {type(whisper_feature)}, value: {whisper_feature if not hasattr(whisper_feature, 'shape') else f'array shape {whisper_feature.shape}'}")
+                
                 whisper_chunks = self.audio_processor.feature2chunks(
                     feature_array=whisper_feature,
                     fps=fps
                 )
-                logger.info(f"Audio processed: {len(whisper_chunks)} chunks")
+                logger.info(f"Audio processed: {len(whisper_chunks)} chunks, chunk type: {type(whisper_chunks[0]) if whisper_chunks else 'empty'}")
             except FileNotFoundError as e:
                 raise RuntimeError(f"Audio processing failed - ffmpeg not found in PATH: {e}") from e
             
@@ -188,6 +190,9 @@ class MuseTalkInference:
                 [str(p) for p in input_img_list],
                 bbox_shift
             )
+            logger.info(f"Landmarks extracted: {len(coord_list)} coords, {len(frame_list)} frames")
+            logger.info(f"coord_list type: {type(coord_list)}, first coord type: {type(coord_list[0]) if coord_list else 'empty'}")
+            logger.info(f"frame_list type: {type(frame_list)}, first frame type: {type(frame_list[0]) if frame_list else 'empty'}")
             
             # Prepare latents
             logger.info("Preparing latent representations...")
