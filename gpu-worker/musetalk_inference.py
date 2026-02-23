@@ -219,20 +219,24 @@ class MuseTalkInference:
             logger.info(f"input_latent_list_cycle type: {type(input_latent_list_cycle)}, first latent type: {type(input_latent_list_cycle[0])}")
             res_frame_list = []
             
-            # datagen expects numpy arrays, not tensors - convert latents back to numpy if needed
-            input_latent_list_cycle_np = []
-            for latent in input_latent_list_cycle:
-                if isinstance(latent, torch.Tensor):
-                    input_latent_list_cycle_np.append(latent.cpu().numpy())
+            # datagen expects TENSORS, not numpy arrays - convert both whisper and latents to tensors
+            whisper_chunks_tensor = []
+            for chunk in whisper_chunks:
+                if isinstance(chunk, np.ndarray):
+                    whisper_chunks_tensor.append(torch.from_numpy(chunk).float())
+                elif isinstance(chunk, torch.Tensor):
+                    whisper_chunks_tensor.append(chunk.float())
                 else:
-                    input_latent_list_cycle_np.append(latent)
+                    whisper_chunks_tensor.append(torch.FloatTensor(chunk))
             
-            logger.info(f"Converted {len(input_latent_list_cycle_np)} latents to numpy")
-            logger.info(f"First converted latent type: {type(input_latent_list_cycle_np[0])}, shape: {input_latent_list_cycle_np[0].shape if hasattr(input_latent_list_cycle_np[0], 'shape') else 'no shape'}")
+            # Latents are already tensors from VAE, keep them as is
+            logger.info(f"Converted {len(whisper_chunks_tensor)} whisper chunks to tensors")
+            logger.info(f"First whisper tensor type: {type(whisper_chunks_tensor[0])}, shape: {whisper_chunks_tensor[0].shape}")
+            logger.info(f"input_latent_list_cycle has {len(input_latent_list_cycle)} latents, first type: {type(input_latent_list_cycle[0])}")
             
             try:
                 logger.info("Creating datagen generator...")
-                gen = datagen(whisper_chunks, input_latent_list_cycle_np, batch_size)
+                gen = datagen(whisper_chunks_tensor, input_latent_list_cycle, batch_size)
                 logger.info("datagen generator created successfully")
             except Exception as e:
                 logger.error(f"Failed to create datagen: {type(e).__name__}: {e}")
@@ -242,52 +246,34 @@ class MuseTalkInference:
             try:
                 for i, (whisper_batch, latent_batch) in enumerate(gen):
                     logger.info(f"=== Processing batch {i} ===")
-                    logger.info(f"Batch {i}: whisper_batch type={type(whisper_batch)}, latent_batch type={type(latent_batch)}")
-                
-                # Convert whisper_batch to tensor
-                if isinstance(whisper_batch, list):
-                    # List of numpy arrays
-                    logger.info(f"whisper_batch is list with {len(whisper_batch)} items")
-                    tensor_list = []
-                    for j, arr in enumerate(whisper_batch):
-                        logger.info(f"  Item {j}: type={type(arr)}, shape={arr.shape if hasattr(arr, 'shape') else 'no shape'}")
-                        if isinstance(arr, np.ndarray):
-                            tensor_list.append(torch.from_numpy(arr).float())
-                        elif torch.is_tensor(arr):
-                            tensor_list.append(arr.float())
-                        else:
-                            raise TypeError(f"Unexpected array type in whisper_batch[{j}]: {type(arr)}")
+                    logger.info(f"whisper_batch: type={type(whisper_batch)}, shape={whisper_batch.shape if hasattr(whisper_batch, 'shape') else 'no shape'}")
+                    logger.info(f"latent_batch: type={type(latent_batch)}, shape={latent_batch.shape if hasattr(latent_batch, 'shape') else 'no shape'}")
                     
-                    logger.info(f"tensor_list has {len(tensor_list)} tensors, first type: {type(tensor_list[0])}")
-                    audio_feature_batch = torch.stack(tensor_list).to(self.unet.device)
-                elif torch.is_tensor(whisper_batch):
-                    # Already a tensor
+                    # datagen already returns tensors, just move to device
                     audio_feature_batch = whisper_batch.to(self.unet.device)
-                else:
-                    raise TypeError(f"Unexpected whisper_batch type: {type(whisper_batch)}")
-                
-                # Convert latent_batch to tensor if needed
-                if not torch.is_tensor(latent_batch):
-                    latent_batch = torch.FloatTensor(latent_batch).to(self.unet.device)
-                else:
                     latent_batch = latent_batch.to(self.unet.device)
-                
-                # Apply PE (V15 has it, V1 uses separate pe model)
-                if self.pe is not None:
-                    audio_feature_batch = self.pe(audio_feature_batch)
-                
-                logger.info(f"Batch {i}: audio {audio_feature_batch.shape}, latent {latent_batch.shape}")
-                
-                # Generate
-                pred_latents = self.unet.model(
-                    latent_batch,
-                    self.timesteps,
-                    encoder_hidden_states=audio_feature_batch
-                ).sample
-                
-                recon = self.vae.decode_latents(pred_latents)
-                for res_frame in recon:
-                    res_frame_list.append(res_frame)
+                    
+                    # Apply PE (V15 has it, V1 uses separate pe model)
+                    if self.pe is not None:
+                        audio_feature_batch = self.pe(audio_feature_batch)
+                    
+                    logger.info(f"After PE - audio shape: {audio_feature_batch.shape}, latent shape: {latent_batch.shape}")
+                    
+                    # Generate
+                    pred_latents = self.unet.model(
+                        latent_batch,
+                        self.timesteps,
+                        encoder_hidden_states=audio_feature_batch
+                    ).sample
+                    
+                    logger.info(f"Generated pred_latents shape: {pred_latents.shape}")
+                    
+                    # Decode latents to frames
+                    recon = self.vae.decode_latents(pred_latents)
+                    logger.info(f"Decoded {len(recon)} frames")
+                    
+                    for res_frame in recon:
+                        res_frame_list.append(res_frame)
             except Exception as e:
                 logger.error(f"Error in batch processing loop: {type(e).__name__}: {e}")
                 logger.error(f"Error occurred at batch {i if 'i' in locals() else 'unknown'}")
