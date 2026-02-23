@@ -20,7 +20,7 @@ coverage/
 tests/
 test/
 
-# Python cache
+# Python cache and virtual environments
 __pycache__/
 *.pyc
 *.pyo
@@ -29,6 +29,10 @@ __pycache__/
 *.so
 *.egg
 *.egg-info/
+venv/
+env/
+.venv/
+virtualenv/
 
 # Git
 .git/
@@ -86,6 +90,13 @@ test-*.sh
 # Other workers
 cpu-server.py
 mock-gpu-server.py
+
+# AI Models (large directories - cloned in Dockerfile)
+MuseTalk/
+**/MuseTalk/
+models/
+checkpoints/
+weights/
 
 # Docker compose (not needed in image)
 docker-compose.yml

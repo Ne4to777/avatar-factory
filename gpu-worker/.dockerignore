@@ -16,6 +16,12 @@ build
 .pytest_cache
 .coverage
 
+# Virtual environments (6GB+ if present!)
+venv/
+env/
+.venv/
+virtualenv/
+
 # Models and checkpoints (скачаются при первом запуске)
 models/
 checkpoints/
