@@ -40,8 +40,12 @@ SHELL ["conda", "run", "-n", "avatar", "/bin/bash", "-c"]
 # Install PyTorch with CUDA
 RUN conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
-# Install OpenMMLab packages via conda-forge
-RUN conda install -c conda-forge mmcv mmdet mmpose -y
+# Install OpenMMLab packages via pip
+RUN pip install --no-cache-dir \
+    mmcv==2.1.0 \
+    mmengine==0.10.3 \
+    mmdet==3.3.0 \
+    mmpose==1.3.1
 
 WORKDIR /app
 
