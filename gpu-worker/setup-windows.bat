@@ -48,14 +48,11 @@ if %errorLevel% neq 0 (
 echo [OK] Environment created
 echo.
 
-REM Activate environment for subsequent commands
-call conda activate avatar
-
-REM Install PyTorch with CUDA
+REM Install PyTorch with CUDA (without activating - use conda run)
 echo [3/6] Installing PyTorch 2.7.0 with CUDA 11.8...
 echo This will download ~3GB, takes 5-10 minutes
 echo.
-conda install pytorch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
+conda install -n avatar pytorch==2.7.0 torchvision==0.22.0 pytorch-cuda=11.8 -c pytorch -c nvidia -y
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install PyTorch
     pause
@@ -64,9 +61,17 @@ if %errorLevel% neq 0 (
 echo [OK] PyTorch installed
 echo.
 
+REM Install torchaudio via pip (not available in conda for 2.7.0)
+echo [4/6] Installing torchaudio...
+conda run -n avatar pip install torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu118
+if %errorLevel% neq 0 (
+    echo [WARNING] Failed to install torchaudio, continuing anyway
+)
+echo.
+
 REM Install Python dependencies
-echo [4/6] Installing Python dependencies...
-pip install -r requirements.txt
+echo [5/6] Installing Python dependencies...
+conda run -n avatar pip install -r requirements.txt
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to install dependencies
     pause
@@ -76,7 +81,7 @@ echo [OK] Dependencies installed
 echo.
 
 REM Clone MuseTalk
-echo [5/6] Cloning MuseTalk repository...
+echo [6/7] Cloning MuseTalk repository...
 if exist MuseTalk (
     echo MuseTalk already exists, skipping
 ) else (
@@ -91,7 +96,7 @@ if exist MuseTalk (
 echo.
 
 REM Create .env file
-echo [6/6] Creating .env file...
+echo [7/7] Creating .env file...
 if exist .env (
     echo .env already exists, skipping
 ) else (
@@ -109,7 +114,7 @@ REM Test GPU
 echo ============================================
 echo Testing GPU availability...
 echo ============================================
-python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
+conda run -n avatar python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
 echo.
 
 if %errorLevel% neq 0 (
