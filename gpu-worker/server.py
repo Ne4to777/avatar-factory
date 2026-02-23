@@ -73,9 +73,10 @@ except Exception as e:
     raise
 
 try:
-    logger.info("Importing asyncio...")
+    logger.info("Importing asyncio and audio libraries...")
     import asyncio
     from typing import Optional
+    import soundfile as sf
     logger.info("Standard libraries imported")
 except Exception as e:
     logger.error(f"Failed to import standard libraries: {e}")
@@ -317,19 +318,22 @@ async def text_to_speech(
     try:
         logger.info(f"TTS request: text='{text[:50]}...', speaker={speaker}")
         
-        # Генерация аудио
-        audio = tts_model.apply_tts(
-            text=text,
-            speaker=speaker,
-            sample_rate=48000
-        )
+        # Генерация аудио (Silero TTS вызывается как функция, без именованных параметров)
+        sample_rate = 48000
+        audio = tts_model(text, speaker, sample_rate)
         
         # Сохранение
         output_path = TEMP_DIR / f"tts_{os.urandom(8).hex()}.wav"
-        import soundfile as sf
-        sf.write(str(output_path), audio.cpu().numpy(), 48000)
         
-        logger.info(f"✅ TTS generated: {output_path.name}")
+        # audio уже numpy array или tensor
+        if hasattr(audio, 'cpu'):
+            audio_np = audio.cpu().numpy()
+        else:
+            audio_np = audio
+            
+        sf.write(str(output_path), audio_np, sample_rate)
+        
+        logger.info(f"✅ TTS generated: {output_path.name} ({len(audio_np)} samples)")
         return FileResponse(output_path, media_type="audio/wav")
         
     except Exception as e:
