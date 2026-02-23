@@ -29,6 +29,11 @@ if not MUSETALK_PATH.exists():
 sys.path.insert(0, str(MUSETALK_PATH))
 logger.info("Added MuseTalk to sys.path")
 
+# MuseTalk modules use relative paths, so we need to change cwd temporarily
+original_cwd = os.getcwd()
+os.chdir(MUSETALK_PATH)
+logger.info(f"Changed working directory to MuseTalk: {os.getcwd()}")
+
 try:
     logger.info("Importing MuseTalk modules...")
     from musetalk.utils.utils import load_all_model, get_file_type, get_video_fps
@@ -40,6 +45,10 @@ except ImportError as e:
     logger.error(error_msg)
     logger.error("Make sure MuseTalk is cloned and dependencies are installed")
     raise ImportError(error_msg) from e
+finally:
+    # Restore original working directory
+    os.chdir(original_cwd)
+    logger.info(f"Restored working directory: {os.getcwd()}")
 
 
 class MuseTalkInference:
