@@ -31,6 +31,8 @@ help:
 	@echo ""
 	@echo "$(GREEN)Test:$(NC)"
 	@echo "  make test             - Run all tests"
+	@echo "  make test-unit        - Run unit tests (172 tests)"
+	@echo "  make test-integration - Run integration tests (requires DB)"
 	@echo "  make test-basic       - Run basic tests"
 	@echo "  make test-api         - Run API tests"
 	@echo "  make health           - Check system health"
@@ -134,7 +136,20 @@ stop:
 	@echo -e "$(GREEN)✓ Stopped$(NC)"
 
 # 🧪 Все тесты
-test: test-basic test-api
+test: test-unit test-integration test-basic test-api
+
+# 🧪 Unit тесты (Vitest)
+test-unit:
+	@echo -e "$(BLUE)Running unit tests...$(NC)"
+	npm run test:unit
+	@echo -e "$(GREEN)✓ Unit tests passed$(NC)"
+
+# 🧪 Integration тесты (требуют БД)
+test-integration:
+	@echo -e "$(BLUE)Running integration tests...$(NC)"
+	@echo -e "$(YELLOW)Requires: PostgreSQL running$(NC)"
+	npm run test:integration
+	@echo -e "$(GREEN)✓ Integration tests passed$(NC)"
 
 # 🧪 Базовые тесты
 test-basic:
@@ -246,8 +261,10 @@ generate-key:
 # 📚 Показать документацию
 docs:
 	@echo -e "$(BLUE)Documentation:$(NC)"
-	@echo "  README.md                  - Main documentation"
-	@echo "  docs/QUICKSTART.md         - Quick start guide"
-	@echo "  docs/INSTALL_GUIDE.md      - Installation guide"
-	@echo "  docs/PROJECT_SUMMARY.md    - Project overview"
-	@echo "  docs/DEPLOYMENT.md         - Production deployment"
+	@echo "  README.md                         - Main documentation"
+	@echo "  docs/API.md                       - API Reference (NEW!)"
+	@echo "  docs/QUICKSTART.md                - Quick start guide"
+	@echo "  docs/REFACTORING_COMPLETE.md      - Refactoring report (NEW!)"
+	@echo "  docs/INSTALL_GUIDE.md             - Installation guide"
+	@echo "  docs/PROJECT_SUMMARY.md           - Project overview"
+	@echo "  docs/DEPLOYMENT.md                - Production deployment"
