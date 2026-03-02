@@ -19,6 +19,7 @@
     "setup": "npm run docker:up && sleep 5 && npm run prisma:migrate",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
