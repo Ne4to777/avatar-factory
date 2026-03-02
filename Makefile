@@ -15,7 +15,8 @@ help:
 	@echo "$(BLUE)Avatar Factory - Available Commands$(NC)"
 	@echo ""
 	@echo "$(GREEN)Setup:$(NC)"
-	@echo "  make install          - Full installation"
+	@echo "  make install          - Full installation (with Docker)"
+	@echo "  make install-local    - Install without Docker"
 	@echo "  make setup-db         - Setup database only"
 	@echo "  make setup-docker     - Setup Docker containers"
 	@echo ""
@@ -53,14 +54,26 @@ help:
 	@echo "  make format           - Format code"
 	@echo "  make lint             - Lint code"
 
-# Full installation
+# Full installation (with Docker)
 install: check-deps
 	@echo -e "$(BLUE)Installing Avatar Factory...$(NC)"
 	npm install
-	@$(MAKE) setup-docker
-	@$(MAKE) setup-db
-	@$(MAKE) test-basic
+	@if docker ps >/dev/null 2>&1; then \
+		$(MAKE) setup-docker; \
+		$(MAKE) setup-db; \
+	else \
+		echo -e "$(YELLOW)[INFO] Docker not running - skipping setup-docker$(NC)"; \
+		echo -e "$(YELLOW)[INFO] Run 'make setup-docker' after starting Docker$(NC)"; \
+	fi
 	@echo -e "$(GREEN)[OK] Installation complete$(NC)"
+
+# Local installation (without Docker)
+install-local: check-deps
+	@echo -e "$(BLUE)Installing Avatar Factory (local mode)...$(NC)"
+	npm install
+	@echo -e "$(GREEN)[OK] Dependencies installed$(NC)"
+	@echo -e "$(YELLOW)[INFO] To setup Docker: make setup-docker$(NC)"
+	@echo -e "$(YELLOW)[INFO] To setup database: make setup-db$(NC)"
 
 # Install Node.js dependencies
 install-deps:
@@ -236,7 +249,7 @@ check-deps:
 	@echo -e "$(BLUE)Checking dependencies...$(NC)"
 	@command -v node >/dev/null 2>&1 && echo -e "$(GREEN)[OK] Node.js$(NC)" || (echo -e "$(RED)[ERROR] Node.js not found$(NC)" && exit 1)
 	@command -v npm >/dev/null 2>&1 && echo -e "$(GREEN)[OK] npm$(NC)" || (echo -e "$(RED)[ERROR] npm not found$(NC)" && exit 1)
-	@command -v docker >/dev/null 2>&1 && echo -e "$(GREEN)[OK] Docker$(NC)" || echo -e "$(YELLOW)[WARNING] Docker not found (required for setup-docker)$(NC)"
+	@command -v docker >/dev/null 2>&1 && echo -e "$(GREEN)[OK] Docker$(NC)" || echo -e "$(YELLOW)[INFO] Docker not found (optional for local dev)$(NC)"
 
 # Open in browser
 open:
