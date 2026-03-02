@@ -478,7 +478,7 @@ async def text_to_speech(
             
         sf.write(str(output_path), audio_np, sample_rate)
         
-        logger.info(f"✅ TTS generated: {output_path.name} ({len(audio_np)} samples)")
+        logger.info(f"[OK] TTS generated: {output_path.name} ({len(audio_np)} samples)")
         
         def cleanup_wav():
             try:
@@ -634,7 +634,7 @@ async def generate_background(
         output_path = TEMP_DIR / f"bg_{os.urandom(8).hex()}.png"
         image.save(output_path)
         
-        logger.info(f"✅ Background generated: {output_path.name}")
+        logger.info(f"[OK] Background generated: {output_path.name}")
 
         def cleanup_png():
             try:
@@ -717,7 +717,7 @@ async def speech_to_text(
             verbose=False
         )
         
-        logger.info(f"✅ STT completed: {len(result['text'])} characters")
+        logger.info(f"[OK] STT completed: {len(result['text'])} characters")
         
         return {
             "text": result["text"],
@@ -810,7 +810,7 @@ async def improve_text(
         else:
             improved = full_response.strip()
         
-        logger.info(f"✅ Text improved: {len(improved)} chars")
+        logger.info(f"[OK] Text improved: {len(improved)} chars")
         
         return {
             "original_text": text,
@@ -1055,7 +1055,7 @@ async def generate_video_api(
             
             result = response.json()
             
-            logger.info(f"✅ Video generation started: task_id={result.get('task_id')}")
+            logger.info(f"[OK] Video generation started: task_id={result.get('task_id')}")
             
             return {
                 "status": "processing",
@@ -1133,7 +1133,7 @@ async def hybrid_pipeline(
             
             results["steps_completed"].append("stt_local")
             results["outputs"]["original_text"] = text
-            logger.info(f"✅ STT: {len(text)} characters")
+            logger.info(f"[OK] STT: {len(text)} characters")
         
         elif not text:
             raise HTTPException(status_code=400, detail="Either audio or text required")
@@ -1166,7 +1166,7 @@ async def hybrid_pipeline(
             
             results["steps_completed"].append("text_improvement_local")
             results["outputs"]["improved_text"] = improved_text
-            logger.info(f"✅ Text improved: {len(improved_text)} characters")
+            logger.info(f"[OK] Text improved: {len(improved_text)} characters")
         
         # STEP 3: Image generation (локально, SDXL batch)
         logger.info(f"STEP 3: Image Generation (local, SDXL) - {num_images} images")
@@ -1191,7 +1191,7 @@ async def hybrid_pipeline(
         
         results["steps_completed"].append("image_generation_local")
         results["outputs"]["images"] = [p.name for p in image_paths]
-        logger.info(f"✅ Generated {num_images} images")
+        logger.info(f"[OK] Generated {num_images} images")
         
         # STEP 4: Video generation (API или skip)
         if generate_video:
@@ -1211,7 +1211,7 @@ async def hybrid_pipeline(
                 results["outputs"]["video_task_id"] = "mock_task_123"  # TODO: реальный вызов API
                 results["outputs"]["video_cost_rub"] = video_cost
                 
-                logger.info(f"✅ Video generation started (45₽)")
+                logger.info(f"[OK] Video generation started (45 RUB)")
             else:
                 logger.info("STEP 4: Video generation skipped (API key not set or disabled)")
                 results["steps_completed"].append("video_generation_skipped")
