@@ -53,48 +53,49 @@ help:
 	@echo "  make format           - Format code"
 	@echo "  make lint             - Lint code"
 
-# 🎯 Полная установка
+# Full installation
 install: check-deps
 	@echo -e "$(BLUE)Installing Avatar Factory...$(NC)"
 	npm install
 	@$(MAKE) setup-docker
 	@$(MAKE) setup-db
 	@$(MAKE) test-basic
-	@echo -e "$(GREEN)✓ Installation complete!$(NC)"
+	@echo -e "$(GREEN)[OK] Installation complete$(NC)"
 
-# 📦 Установка Node.js зависимостей
+# Install Node.js dependencies
 install-deps:
 	@echo -e "$(BLUE)Installing npm dependencies...$(NC)"
 	npm install
-	@echo -e "$(GREEN)✓ Dependencies installed$(NC)"
+	@echo -e "$(GREEN)[OK] Dependencies installed$(NC)"
 
-# 🐳 Настройка Docker
+# Setup Docker infrastructure
 setup-docker:
 	@echo -e "$(BLUE)Setting up Docker infrastructure...$(NC)"
 	@if ! docker ps >/dev/null 2>&1; then \
-		echo -e "$(RED)✗ Docker is not running$(NC)"; \
+		echo -e "$(RED)[ERROR] Docker is not running$(NC)"; \
+		echo -e "$(YELLOW)[WARNING] Please start Docker Desktop and try again$(NC)"; \
 		exit 1; \
 	fi
 	docker-compose down || true
 	docker-compose up -d
 	@sleep 5
 	docker-compose ps
-	@echo -e "$(GREEN)✓ Docker infrastructure ready$(NC)"
+	@echo -e "$(GREEN)[OK] Docker infrastructure ready$(NC)"
 	@echo ""
 	@echo -e "$(BLUE)Available profiles:$(NC)"
 	@echo "  --profile app    # Add App + Worker"
 	@echo "  --profile gpu    # Add GPU Worker"
 	@echo "  --profile full   # Everything"
 
-# 🎮 Build GPU Worker
+# Build GPU Worker
 build-gpu:
 	@echo -e "$(BLUE)Building GPU Worker Docker image...$(NC)"
-	@echo -e "$(YELLOW)First build: 15-20 minutes (~5GB downloads)$(NC)"
-	@echo -e "$(YELLOW)Cached build: 2-3 minutes (code changes only)$(NC)"
+	@echo -e "$(YELLOW)[INFO] First build: 15-20 minutes (~5GB downloads)$(NC)"
+	@echo -e "$(YELLOW)[INFO] Cached build: 2-3 minutes (code changes only)$(NC)"
 	DOCKER_BUILDKIT=1 docker build -f gpu-worker/Dockerfile -t avatar-gpu-worker:latest gpu-worker
-	@echo -e "$(GREEN)✓ GPU Worker image built$(NC)"
+	@echo -e "$(GREEN)[OK] GPU Worker image built$(NC)"
 
-# 🚀 Start GPU Worker
+# Start GPU Worker
 start-gpu: build-gpu
 	@echo -e "$(BLUE)Starting GPU Worker container...$(NC)"
 	docker stop avatar-gpu-worker 2>/dev/null || true
@@ -108,84 +109,84 @@ start-gpu: build-gpu
 		-v "$(PWD)/gpu-worker/checkpoints:/app/checkpoints" \
 		-v "$(PWD)/gpu-worker/models:/app/models" \
 		avatar-gpu-worker:latest
-	@echo -e "$(GREEN)✓ GPU Worker started$(NC)"
+	@echo -e "$(GREEN)[OK] GPU Worker started$(NC)"
 	@echo ""
 	@echo "Health check: http://localhost:8001/health"
 
-# 🗄️ Настройка базы данных
+# Setup database
 setup-db:
 	@echo -e "$(BLUE)Setting up database...$(NC)"
 	npx prisma generate
 	npx prisma migrate deploy
-	@echo -e "$(GREEN)✓ Database ready$(NC)"
+	@echo -e "$(GREEN)[OK] Database ready$(NC)"
 
-# 🚀 Запуск dev сервера
+# Start dev server
 dev:
 	npm run dev
 
-# ⚙️ Запуск worker
+# Start worker
 worker:
 	npm run worker
 
-# 🛑 Остановка
+# Stop all services
 stop:
 	@echo -e "$(YELLOW)Stopping services...$(NC)"
 	docker-compose down
 	@pkill -f "next dev" || true
 	@pkill -f "video-worker" || true
-	@echo -e "$(GREEN)✓ Stopped$(NC)"
+	@echo -e "$(GREEN)[OK] Stopped$(NC)"
 
-# 🧪 Все тесты
+# Run all tests
 test: test-unit test-integration test-basic test-api
 
-# 🧪 Unit тесты (Vitest)
+# Unit tests (Vitest)
 test-unit:
 	@echo -e "$(BLUE)Running unit tests...$(NC)"
 	npm run test:unit
-	@echo -e "$(GREEN)✓ Unit tests passed$(NC)"
+	@echo -e "$(GREEN)[OK] Unit tests passed$(NC)"
 
-# 🧪 Integration тесты (требуют БД)
+# Integration tests (requires DB)
 test-integration:
 	@echo -e "$(BLUE)Running integration tests...$(NC)"
-	@echo -e "$(YELLOW)Requires: PostgreSQL running$(NC)"
+	@echo -e "$(YELLOW)[INFO] Requires: PostgreSQL running$(NC)"
 	npm run test:integration
-	@echo -e "$(GREEN)✓ Integration tests passed$(NC)"
+	@echo -e "$(GREEN)[OK] Integration tests passed$(NC)"
 
-# 🧪 Базовые тесты
+# Basic tests
 test-basic:
 	@echo -e "$(BLUE)Running basic tests...$(NC)"
 	npx tsx test-basic.ts
 
-# 🧪 API тесты
+# API tests
 test-api:
 	@echo -e "$(BLUE)Running API tests...$(NC)"
 	npx tsx test-api-full.ts
 
-# 🏥 Health check
+# Health check
 health:
 	@echo -e "$(BLUE)System Health:$(NC)"
 	@curl -s http://localhost:3000/api/health || echo "Server not running"
 
-# 🧹 Очистка
+# Clean temporary files
 clean:
 	@echo -e "$(BLUE)Cleaning temporary files...$(NC)"
 	rm -rf node_modules/.cache
 	rm -rf .next
 	rm -rf /tmp/avatar-factory/*
-	@echo -e "$(GREEN)✓ Cleaned$(NC)"
+	@echo -e "$(GREEN)[OK] Cleaned$(NC)"
 
-# 🗑️ Глубокая очистка
+# Deep clean
 clean-all: stop
-	@echo -e "$(YELLOW)⚠ This will remove all data!$(NC)"
+	@echo -e "$(YELLOW)[WARNING] This will remove all data!$(NC)"
 	@read -p "Continue? (y/n) " -n 1 -r && echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 		$(MAKE) clean; \
 		rm -rf node_modules; \
 		docker-compose down -v; \
-		echo -e "$(GREEN)✓ Deep clean complete$(NC)"; \
+		echo -e "$(GREEN)[OK] Deep clean complete$(NC)"; \
 	fi
 
-# 📊 Статус сервисов
+# Service status
 status:
 	@echo -e "$(BLUE)=== Docker Services ===$(NC)"
 	@docker-compose ps
@@ -193,11 +194,11 @@ status:
 	@echo -e "$(BLUE)=== Node.js Processes ===$(NC)"
 	@ps aux | grep -E "(next|worker)" | grep -v grep || echo "No processes"
 
-# 📝 Логи
+# Show logs
 logs:
 	docker-compose logs -f
 
-# 📝 Логи конкретного сервиса
+# Show specific service logs
 logs-postgres:
 	docker-compose logs -f postgres
 
@@ -207,7 +208,7 @@ logs-redis:
 logs-minio:
 	docker-compose logs -f minio
 
-# 🗄️ Database команды
+# Database commands
 db-migrate:
 	npx prisma migrate dev
 
@@ -220,28 +221,28 @@ db-studio:
 db-seed:
 	npx prisma db seed
 
-# 📦 Build для production
+# Build for production
 build:
 	@echo -e "$(BLUE)Building for production...$(NC)"
 	npm run build
-	@echo -e "$(GREEN)✓ Build complete$(NC)"
+	@echo -e "$(GREEN)[OK] Build complete$(NC)"
 
-# 🚀 Запуск production
+# Start production
 start-prod: build
 	npm run start
 
-# 🔍 Проверка зависимостей
+# Check dependencies
 check-deps:
 	@echo -e "$(BLUE)Checking dependencies...$(NC)"
-	@command -v node >/dev/null 2>&1 && echo -e "$(GREEN)✓ Node.js$(NC)" || (echo -e "$(RED)✗ Node.js not found$(NC)" && exit 1)
-	@command -v npm >/dev/null 2>&1 && echo -e "$(GREEN)✓ npm$(NC)" || (echo -e "$(RED)✗ npm not found$(NC)" && exit 1)
-	@command -v docker >/dev/null 2>&1 && echo -e "$(GREEN)✓ Docker$(NC)" || (echo -e "$(RED)✗ Docker not found$(NC)" && exit 1)
+	@command -v node >/dev/null 2>&1 && echo -e "$(GREEN)[OK] Node.js$(NC)" || (echo -e "$(RED)[ERROR] Node.js not found$(NC)" && exit 1)
+	@command -v npm >/dev/null 2>&1 && echo -e "$(GREEN)[OK] npm$(NC)" || (echo -e "$(RED)[ERROR] npm not found$(NC)" && exit 1)
+	@command -v docker >/dev/null 2>&1 && echo -e "$(GREEN)[OK] Docker$(NC)" || echo -e "$(YELLOW)[WARNING] Docker not found (required for setup-docker)$(NC)"
 
-# 🌐 Открыть в браузере
+# Open in browser
 open:
 	@open http://localhost:3000 || xdg-open http://localhost:3000 || echo "Open: http://localhost:3000"
 
-# 📊 Информация о проекте
+# Project info
 info:
 	@echo -e "$(BLUE)=== Project Info ===$(NC)"
 	@echo "Name:    Avatar Factory"
@@ -254,11 +255,11 @@ info:
 	@echo "Adminer: http://localhost:8080"
 	@echo "MinIO:   http://localhost:9001"
 
-# 🔐 Генерация API ключа
+# Generate API key
 generate-key:
 	@openssl rand -base64 32
 
-# 📚 Показать документацию
+# Show documentation
 docs:
 	@echo -e "$(BLUE)Documentation:$(NC)"
 	@echo "  README.md                         - Main documentation"
