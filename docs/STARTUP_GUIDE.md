@@ -110,6 +110,8 @@ make stop
 
 #### Первый раз (setup):
 
+**Автоматическая установка (рекомендуется):**
+
 ```powershell
 # 1. Clone проекта
 cd C:\Projects
@@ -119,19 +121,47 @@ cd avatar-factory\gpu-worker
 # 2. Pull последние изменения
 git pull origin main
 
-# 3. Создать venv
+# 3. Запустить автоматическую установку
+# Для PowerShell:
+.\install_windows.ps1
+
+# Или для CMD:
+install_windows.bat
+
+# Скрипт автоматически:
+# - Создаст venv
+# - Установит PyTorch 2.1.0 + CUDA 11.8
+# - Установит mmcv через mim (правильная версия)
+# - Установит все остальные зависимости
+# - Проверит установку
+
+# 4. Первый запуск (скачает модели ~5GB)
+python server.py
+```
+
+**Ручная установка (если автоматическая не работает):**
+
+```powershell
+# 1. Создать venv
 python -m venv venv
 venv\Scripts\activate
 
-# 4. Установить зависимости
+# 2. Обновить базовые инструменты
+pip install --upgrade pip setuptools wheel
+
+# 3. Установить PyTorch СНАЧАЛА
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+
+# 4. Установить OpenMMLab пакеты через mim
+pip install -U openmim
+mim install mmcv==2.1.0
+pip install mmdet mmpose
+
+# 5. Установить остальные зависимости
 pip install -r requirements.txt
 
-# 5. Установить PyTorch с CUDA
-pip install torch==2.1.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
-# 6. Скачать модели (первый запуск)
+# 6. Первый запуск
 python server.py
-# Модели скачаются автоматически (~5GB)
 ```
 
 #### Каждый день (запуск):
@@ -244,6 +274,8 @@ HOST=0.0.0.0
 | PostgreSQL не стартует | `make logs-postgres` | Не применимо |
 | GPU Worker недоступен | Проверь `GPU_SERVER_URL` в `.env` | Проверь firewall |
 | Нет CUDA | Не применимо | Установи CUDA Toolkit 11.8+ |
+| mmcv build error | Не применимо | Используй `install_windows.ps1` или<br>`mim install mmcv==2.1.0` |
+| ModuleNotFoundError: pkg_resources | Не применимо | `pip install --upgrade setuptools` |
 
 ---
 
