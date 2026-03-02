@@ -27,6 +27,30 @@ export interface ComposeVideoOptions {
   outputPath?: string;
 }
 
+/**
+ * Build FFmpeg filter for scaling background to fill target dimensions
+ */
+function buildBackgroundScaleFilter(
+  targetWidth: number,
+  targetHeight: number
+): string {
+  return `scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=increase,crop=${targetWidth}:${targetHeight}`;
+}
+
+/**
+ * Build FFmpeg filter for scaling avatar video to target width
+ */
+function buildAvatarScaleFilter(avatarWidth: number): string {
+  return `scale=${avatarWidth}:-1`;
+}
+
+/**
+ * Build FFmpeg filter for overlaying avatar on background
+ */
+function buildOverlayFilter(): string {
+  return `overlay=(W-w)/2:(H-h)/2:shortest=1`;
+}
+
 // Экспортируем VideoMetadata из types.ts
 export type { VideoMetadata as VideoInfo } from './types';
 
@@ -186,21 +210,21 @@ export async function composeVideo(options: ComposeVideoOptions): Promise<string
     
     // Создаем фильтры для композитинга
     const filters: string[] = [];
-    
+
     // 1. Масштабируем и растягиваем фон на весь экран
     filters.push(
-      `[0:v]scale=${dimensions.width}:${dimensions.height}:force_original_aspect_ratio=increase,crop=${dimensions.width}:${dimensions.height}[bg]`
+      `[0:v]${buildBackgroundScaleFilter(dimensions.width, dimensions.height)}[bg]`
     );
-    
+
     // 2. Масштабируем аватар (занимает 60% ширины)
     const avatarWidth = Math.floor(dimensions.width * 0.6);
     filters.push(
-      `[1:v]scale=${avatarWidth}:-1[avatar]`
+      `[1:v]${buildAvatarScaleFilter(avatarWidth)}[avatar]`
     );
-    
+
     // 3. Накладываем аватар по центру
     filters.push(
-      `[bg][avatar]overlay=(W-w)/2:(H-h)/2:shortest=1[video_with_avatar]`
+      `[bg][avatar]${buildOverlayFilter()}[video_with_avatar]`
     );
     
     // 4. Финальное видео (без субтитров для упрощения теста)

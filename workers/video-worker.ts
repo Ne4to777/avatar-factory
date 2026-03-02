@@ -17,8 +17,10 @@ import {
   getBackgroundDimensions,
 } from '../lib/config';
 import { composeVideo, generateThumbnail, getVideoInfo, ensureTempDir } from '../lib/video';
-import { uploadVideo, uploadThumbnail, deleteFile } from '../lib/storage';
+import { uploadVideo, uploadThumbnail } from '../lib/storage';
+import { logger } from '../lib/logger';
 import type { VideoJobData, VideoJobResult } from '../lib/queue';
+import type { VideoFormat } from '../lib/types';
 
 const connection = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
@@ -28,6 +30,122 @@ const connection = new Redis({
 
 const TEMP_DIR = process.env.TEMP_DIR || '/tmp/avatar-factory';
 
+async function generateAudio(
+  text: string,
+  voiceId: string,
+  videoId: string
+): Promise<{ audioPath: string }> {
+  const audioBuffer = await gpuClient.textToSpeech(text, getSpeakerFromVoiceId(voiceId));
+  const audioPath = path.join(TEMP_DIR, `audio_${videoId}.wav`);
+  await fs.writeFile(audioPath, audioBuffer);
+  return { audioPath };
+}
+
+async function getAvatarImagePath(
+  avatarId?: string,
+  photoUrl?: string
+): Promise<string> {
+  if (!avatarId && !photoUrl) {
+    throw new Error('Either avatarId or photoUrl must be provided');
+  }
+
+  if (avatarId) {
+    const avatar = await prisma.avatar.findUnique({
+      where: { id: avatarId },
+    });
+    if (!avatar) throw new Error(`Avatar ${avatarId} not found`);
+    return downloadFile(avatar.photoUrl);
+  }
+
+  return downloadFile(photoUrl!);
+}
+
+async function getBackgroundPath(
+  backgroundUrl: string | undefined,
+  style: string,
+  format: VideoFormat,
+  videoId: string
+): Promise<string> {
+  if (backgroundUrl) {
+    return downloadFile(backgroundUrl);
+  }
+
+  const prompt = getBackgroundPrompt(style);
+  const dimensions = getBackgroundDimensions(format);
+  const backgroundBuffer = await gpuClient.generateBackground(
+    prompt,
+    style,
+    dimensions.width,
+    dimensions.height
+  );
+  const backgroundPath = path.join(TEMP_DIR, `bg_${videoId}.png`);
+  await fs.writeFile(backgroundPath, backgroundBuffer);
+  return backgroundPath;
+}
+
+async function generateLipSyncVideo(
+  avatarImagePath: string,
+  audioPath: string,
+  videoId: string,
+  job: Job<VideoJobData>
+): Promise<string> {
+  await job.updateProgress({ progress: 40, stage: 'lip-sync' });
+
+  const lipSyncBuffer = await gpuClient.createLipSync(avatarImagePath, audioPath);
+  const lipSyncVideoPath = path.join(TEMP_DIR, `lipsync_${videoId}.mp4`);
+  await fs.writeFile(lipSyncVideoPath, lipSyncBuffer);
+
+  await fs.unlink(avatarImagePath).catch(() => {});
+  await fs.unlink(audioPath).catch(() => {});
+
+  await job.updateProgress({ progress: 60, stage: 'lip-sync' });
+  return lipSyncVideoPath;
+}
+
+async function composeAndUploadVideo(
+  lipSyncVideoPath: string,
+  backgroundPath: string,
+  format: VideoFormat,
+  text: string,
+  videoId: string,
+  job: Job<VideoJobData>
+): Promise<{ finalVideoUrl: string; thumbnailUrl: string; duration: number }> {
+  await job.updateProgress({ progress: 75, stage: 'compositing' });
+
+  const finalVideoPath = await composeVideo({
+    avatarVideoPath: lipSyncVideoPath,
+    backgroundImagePath: backgroundPath,
+    format,
+    subtitlesText: text.length < 150 ? text : undefined,
+  });
+
+  await job.updateProgress({ progress: 90, stage: 'thumbnail' });
+
+  const thumbnailPath = await generateThumbnail(finalVideoPath);
+
+  await job.updateProgress({ progress: 93, stage: 'upload' });
+
+  const [videoUpload, thumbnailUpload] = await Promise.all([
+    uploadVideo(finalVideoPath),
+    uploadThumbnail(thumbnailPath),
+  ]);
+
+  const videoInfo = await getVideoInfo(finalVideoPath);
+
+  await cleanupTempFiles([
+    lipSyncVideoPath,
+    backgroundPath,
+    finalVideoPath,
+    thumbnailPath,
+  ]);
+
+  return {
+    finalVideoUrl: videoUpload.publicUrl,
+    thumbnailUrl: thumbnailUpload.publicUrl,
+    duration: Math.round(videoInfo.duration),
+  };
+}
+
 /**
  * Главный Worker для обработки видео
  */
@@ -35,181 +153,85 @@ const worker = new Worker<VideoJobData, VideoJobResult>(
   'video-generation',
   async (job: Job<VideoJobData>) => {
     const { videoId, userId, text, photoUrl, avatarId, backgroundStyle, backgroundUrl, voiceId, format } = job.data;
-    
-    console.log(`\n🎬 Starting video generation: ${videoId}`);
-    console.log(`   User: ${userId}`);
-    console.log(`   Text: ${text.substring(0, 50)}...`);
-    
+
+    logger.videoProcessing(videoId, 'Started processing video', { userId });
+
     try {
-      // Обновляем статус в БД
       await updateVideoStatus(videoId, 'PROCESSING', 0);
-      
-      // 1️⃣ ГЕНЕРАЦИЯ АУДИО (TTS)
-      console.log('\n1️⃣ Generating audio...');
-      await job.updateProgress({ progress: 10 });
-      
-      const audioBuffer = await gpuClient.textToSpeech(text, getSpeakerFromVoiceId(voiceId));
-      const audioPath = path.join(TEMP_DIR, `audio_${videoId}.wav`);
-      await fs.writeFile(audioPath, audioBuffer);
-      
-      console.log(`✅ Audio generated: ${audioPath}`);
+
+      // Step 1: Generate audio (0–20%)
+      await job.updateProgress({ progress: 10, stage: 'tts' });
+      const { audioPath } = await generateAudio(text, voiceId, videoId);
       await updateVideoStatus(videoId, 'PROCESSING', 20);
-      
-      // 2️⃣ ПОЛУЧЕНИЕ ФОТО АВАТАРА
-      console.log('\n2️⃣ Getting avatar photo...');
-      await job.updateProgress({ progress: 30 });
-      
-      let avatarPhotoPath: string;
-      
-      if (avatarId) {
-        // Используем существующий аватар
-        const avatar = await prisma.avatar.findUnique({
-          where: { id: avatarId },
-        });
-        
-        if (!avatar) {
-          throw new Error(`Avatar ${avatarId} not found`);
-        }
-        
-        avatarPhotoPath = await downloadFile(avatar.photoUrl);
-      } else if (photoUrl) {
-        // Используем загруженное фото
-        avatarPhotoPath = await downloadFile(photoUrl);
-      } else {
-        throw new Error('No avatar or photo provided');
-      }
-      
-      console.log(`✅ Avatar photo ready: ${avatarPhotoPath}`);
+
+      // Step 2: Get avatar image (20–35%)
+      await job.updateProgress({ progress: 30, stage: 'avatar' });
+      const avatarImagePath = await getAvatarImagePath(avatarId, photoUrl);
       await updateVideoStatus(videoId, 'PROCESSING', 35);
-      
-      // 3️⃣ СОЗДАНИЕ ГОВОРЯЩЕГО АВАТАРА (LIP-SYNC)
-      console.log('\n3️⃣ Creating talking avatar (lip-sync)...');
-      await job.updateProgress({ progress: 40 });
-      
-      const lipSyncBuffer = await gpuClient.createLipSync(avatarPhotoPath, audioPath);
-      const lipSyncVideoPath = path.join(TEMP_DIR, `lipsync_${videoId}.mp4`);
-      await fs.writeFile(lipSyncVideoPath, lipSyncBuffer);
-      
-      console.log(`✅ Lip-sync video created: ${lipSyncVideoPath}`);
-      await updateVideoStatus(videoId, 'PROCESSING', 60);
-      
-      // 4️⃣ ПОЛУЧЕНИЕ ИЛИ ГЕНЕРАЦИЯ ФОНА
-      console.log('\n4️⃣ Getting background...');
-      await job.updateProgress({ progress: 65 });
-      
-      let backgroundPath: string;
-      
-      if (backgroundUrl) {
-        // Используем существующий фон
-        backgroundPath = await downloadFile(backgroundUrl);
-      } else {
-        // Генерируем новый фон через Stable Diffusion
-        const dimensions = getBackgroundDimensions(format);
-        const prompt = getBackgroundPrompt(backgroundStyle);
-        
-        console.log(`   Generating background: ${prompt}`);
-        const backgroundBuffer = await gpuClient.generateBackground(
-          prompt,
-          backgroundStyle,
-          dimensions.width,
-          dimensions.height
-        );
-        
-        backgroundPath = path.join(TEMP_DIR, `bg_${videoId}.png`);
-        await fs.writeFile(backgroundPath, backgroundBuffer);
-      }
-      
-      console.log(`✅ Background ready: ${backgroundPath}`);
-      await updateVideoStatus(videoId, 'PROCESSING', 70);
-      
-      // 5️⃣ КОМПОЗИТИНГ ФИНАЛЬНОГО ВИДЕО
-      console.log('\n5️⃣ Composing final video...');
-      await job.updateProgress({ progress: 75 });
-      
-      const finalVideoPath = await composeVideo({
-        avatarVideoPath: lipSyncVideoPath,
-        backgroundImagePath: backgroundPath,
+
+      // Step 3: Get or generate background (35–60%)
+      await job.updateProgress({ progress: 65, stage: 'background' });
+      const backgroundPath = await getBackgroundPath(
+        backgroundUrl,
+        backgroundStyle,
         format,
-        subtitlesText: text.length < 150 ? text : undefined, // Субтитры только для коротких текстов
-      });
-      
-      console.log(`✅ Final video composed: ${finalVideoPath}`);
-      await updateVideoStatus(videoId, 'PROCESSING', 85);
-      
-      // 6️⃣ СОЗДАНИЕ THUMBNAIL
-      console.log('\n6️⃣ Generating thumbnail...');
-      await job.updateProgress({ progress: 90 });
-      
-      const thumbnailPath = await generateThumbnail(finalVideoPath);
-      console.log(`✅ Thumbnail created: ${thumbnailPath}`);
-      
-      // 7️⃣ ЗАГРУЗКА В ХРАНИЛИЩЕ
-      console.log('\n7️⃣ Uploading to storage...');
-      await job.updateProgress({ progress: 93 });
-      
-      const [videoUpload, thumbnailUpload] = await Promise.all([
-        uploadVideo(finalVideoPath),
-        uploadThumbnail(thumbnailPath),
-      ]);
-      
-      console.log(`✅ Video uploaded: ${videoUpload.publicUrl}`);
-      console.log(`✅ Thumbnail uploaded: ${thumbnailUpload.publicUrl}`);
-      
-      // 8️⃣ ПОЛУЧЕНИЕ МЕТАДАННЫХ ВИДЕО
-      const videoInfo = await getVideoInfo(finalVideoPath);
-      
-      // 9️⃣ ОБНОВЛЕНИЕ БД
-      console.log('\n9️⃣ Updating database...');
-      await job.updateProgress({ progress: 97 });
-      
+        videoId
+      );
+      await updateVideoStatus(videoId, 'PROCESSING', 70);
+
+      // Step 4: Create lip-sync video (40–60%)
+      const lipSyncVideoPath = await generateLipSyncVideo(
+        avatarImagePath,
+        audioPath,
+        videoId,
+        job
+      );
+
+      // Step 5: Compose and upload (60–100%)
+      const { finalVideoUrl, thumbnailUrl, duration } = await composeAndUploadVideo(
+        lipSyncVideoPath,
+        backgroundPath,
+        format,
+        text,
+        videoId,
+        job
+      );
+
+      await job.updateProgress({ progress: 97, stage: 'complete' });
+
       await prisma.video.update({
         where: { id: videoId },
         data: {
           status: 'COMPLETED',
           progress: 100,
-          videoUrl: videoUpload.publicUrl,
-          thumbnailUrl: thumbnailUpload.publicUrl,
-          duration: Math.round(videoInfo.duration),
+          videoUrl: finalVideoUrl,
+          thumbnailUrl,
+          duration,
           processedAt: new Date(),
         },
       });
-      
-      // 🧹 ОЧИСТКА ВРЕМЕННЫХ ФАЙЛОВ
-      console.log('\n🧹 Cleaning up temp files...');
-      await cleanupTempFiles([
-        audioPath,
-        avatarPhotoPath,
-        lipSyncVideoPath,
-        backgroundPath,
-        finalVideoPath,
-        thumbnailPath,
-      ]);
-      
-      console.log(`\n✅ Video generation completed: ${videoId}`);
-      console.log(`   URL: ${videoUpload.publicUrl}\n`);
-      
+
+      logger.videoProcessing(videoId, 'Video processed successfully');
+
       return {
         videoId,
-        videoUrl: videoUpload.publicUrl,
-        thumbnailUrl: thumbnailUpload.publicUrl,
-        duration: Math.round(videoInfo.duration),
+        videoUrl: finalVideoUrl,
+        thumbnailUrl,
+        duration,
         format,
         quality: 'MEDIUM',
       };
-      
-    } catch (error: any) {
-      console.error(`\n❌ Video generation failed: ${videoId}`);
-      console.error(error);
-      
-      // Обновляем статус ошибки в БД
+    } catch (error: unknown) {
+      logger.videoError(videoId, error);
+
       await prisma.video.update({
         where: { id: videoId },
         data: {
           status: 'FAILED',
-          errorMessage: error.message || 'Unknown error',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
         },
       });
-      
+
       throw error;
     }
   },
