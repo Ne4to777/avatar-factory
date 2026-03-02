@@ -3,8 +3,6 @@
  * Structured logging с контекстом
  */
 
-import { ErrorContext } from './types';
-
 export enum LogLevel {
   DEBUG = 'DEBUG',
   INFO = 'INFO',
@@ -12,12 +10,16 @@ export enum LogLevel {
   ERROR = 'ERROR',
 }
 
+interface LogContext {
+  [key: string]: unknown;
+}
+
 interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  context?: Record<string, any>;
-  error?: any;
+  context?: LogContext;
+  error?: unknown;
 }
 
 class Logger {
@@ -33,6 +35,17 @@ class Logger {
     return levels.indexOf(level) >= levels.indexOf(this.minLevel);
   }
 
+  private formatError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (error && typeof error === 'object' && 'message' in error) {
+      const msg = (error as { message: unknown }).message;
+      if (typeof msg === 'string') return msg;
+    }
+    return String(error);
+  }
+
   private formatLog(entry: LogEntry): string {
     const { level, message, timestamp, context, error } = entry;
     
@@ -43,8 +56,8 @@ class Logger {
     }
     
     if (error) {
-      log += `\n  Error: ${error.message}`;
-      if (error.stack) {
+      log += `\n  Error: ${this.formatError(error)}`;
+      if (error instanceof Error && error.stack) {
         log += `\n  Stack: ${error.stack}`;
       }
     }
@@ -52,7 +65,7 @@ class Logger {
     return log;
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, any>, error?: any) {
+  private log(level: LogLevel, message: string, context?: LogContext, error?: unknown) {
     if (!this.shouldLog(level)) return;
 
     const entry: LogEntry = {
@@ -80,44 +93,44 @@ class Logger {
     }
   }
 
-  debug(message: string, context?: Record<string, any>) {
+  debug(message: string, context?: LogContext) {
     this.log(LogLevel.DEBUG, message, context);
   }
 
-  info(message: string, context?: Record<string, any>) {
+  info(message: string, context?: LogContext) {
     this.log(LogLevel.INFO, message, context);
   }
 
-  warn(message: string, context?: Record<string, any>) {
+  warn(message: string, context?: LogContext) {
     this.log(LogLevel.WARN, message, context);
   }
 
-  error(message: string, error?: any, context?: Record<string, any>) {
+  error(message: string, error?: unknown, context?: LogContext) {
     this.log(LogLevel.ERROR, message, context, error);
   }
 
   // Специализированные методы для частых кейсов
-  videoProcessing(videoId: string, message: string, context?: Record<string, any>) {
+  videoProcessing(videoId: string, message: string, context?: LogContext) {
     this.info(message, { videoId, ...context });
   }
 
-  videoError(videoId: string, error: any, context?: Record<string, any>) {
+  videoError(videoId: string, error: unknown, context?: LogContext) {
     this.error(`Video processing failed: ${videoId}`, error, { videoId, ...context });
   }
 
-  gpuRequest(operation: string, context?: Record<string, any>) {
+  gpuRequest(operation: string, context?: LogContext) {
     this.info(`GPU Server request: ${operation}`, context);
   }
 
-  gpuError(operation: string, error: any, context?: Record<string, any>) {
+  gpuError(operation: string, error: unknown, context?: LogContext) {
     this.error(`GPU Server error: ${operation}`, error, context);
   }
 
-  storageOperation(operation: string, context?: Record<string, any>) {
+  storageOperation(operation: string, context?: LogContext) {
     this.info(`Storage operation: ${operation}`, context);
   }
 
-  storageError(operation: string, error: any, context?: Record<string, any>) {
+  storageError(operation: string, error: unknown, context?: LogContext) {
     this.error(`Storage error: ${operation}`, error, context);
   }
 }

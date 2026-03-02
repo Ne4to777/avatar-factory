@@ -3,7 +3,7 @@
  * Клиент для взаимодействия с GPU сервером на стационарном ПК
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import * as fs from 'fs';
 import { Readable } from 'stream';
@@ -50,34 +50,42 @@ class GPUServerClient {
     // Response interceptor для обработки ошибок
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
-        return Promise.reject(this.handleError(error));
-      }
+      (error: unknown) => Promise.reject(this.handleError(error))
     );
   }
 
-  private handleError(error: AxiosError): GPUServerError {
-    const operation = error.config?.url || 'unknown operation';
-    
-    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-      const message = `GPU Server unavailable at ${this.baseURL}`;
-      logger.gpuError(operation, error, { baseURL: this.baseURL });
-      return new GPUServerError(message, { operation });
-    }
-
-    if (error.response) {
-      const status = error.response.status;
-      const data = error.response.data as any;
-      const detail = data?.detail || data?.message || 'Unknown error';
+  private handleError(error: unknown): never {
+    const context = axios.isAxiosError(error) ? (error.config?.url || 'unknown operation') : 'unknown operation';
+    if (axios.isAxiosError(error)) {
+      const operation = error.config?.url || context;
       
-      const message = `GPU Server error (${status}): ${detail}`;
-      logger.gpuError(operation, error, { status, detail });
-      return new GPUServerError(message, { operation, status, detail });
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        const message = `GPU Server unavailable at ${this.baseURL}`;
+        logger.gpuError(operation, error, { baseURL: this.baseURL });
+        throw new GPUServerError(message, { operation });
+      }
+
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data as { message?: string; error?: string; detail?: string } | undefined;
+        const detail = data?.message || data?.error || data?.detail || 'Unknown error';
+        
+        const msg = `GPU Server error (${status}): ${detail}`;
+        logger.gpuError(operation, error, { status, detail });
+        throw new GPUServerError(msg, { operation, status, detail });
+      }
+
+      const message = `GPU Server request failed: ${error.message}`;
+      logger.gpuError(operation, error);
+      throw new GPUServerError(message, { operation });
+    }
+    
+    if (error instanceof Error) {
+      logger.gpuError(context, error);
+      throw new GPUServerError(error.message, { operation: context });
     }
 
-    const message = `GPU Server request failed: ${error.message}`;
-    logger.gpuError(operation, error);
-    return new GPUServerError(message, { operation });
+    throw new GPUServerError('Unknown error occurred', { operation: context });
   }
   
   /**

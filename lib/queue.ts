@@ -18,6 +18,23 @@ const connection = new Redis({
 // Экспортируем типы из types.ts
 export type { VideoJobData, VideoJobResult } from './types';
 
+interface JobProgress {
+  progress: number;
+  stage?: string;
+}
+
+export interface JobStatusResult {
+  id: string;
+  state: string;
+  progress: number;
+  data: VideoJobData;
+  returnvalue: VideoJobResult | undefined;
+  failedReason: string | undefined;
+  timestamp: number | undefined;
+  processedOn: number | undefined;
+  finishedOn: number | undefined;
+}
+
 // Очередь для генерации видео
 export const videoQueue = new Queue<VideoJobData, VideoJobResult>(
   QUEUE_CONFIG.VIDEO_GENERATION.name,
@@ -83,7 +100,7 @@ export async function addVideoJob(
     });
     
     return job;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to add video job', error, { videoId: data.videoId });
     throw error;
   }
@@ -92,31 +109,32 @@ export async function addVideoJob(
 /**
  * Получение статуса задачи
  */
-export async function getJobStatus(jobId: string) {
+export async function getJobStatus(jobId: string): Promise<JobStatusResult | null> {
   try {
     const job = await videoQueue.getJob(jobId);
-    
+
     if (!job) {
       return null;
     }
-    
+
     const state = await job.getState();
-    const progress = typeof job.progress === 'object' 
-      ? (job.progress as any).progress 
-      : job.progress;
-    
+    const progressValue = job.progress as JobProgress | number;
+    const progress = typeof progressValue === 'number'
+      ? progressValue
+      : progressValue?.progress ?? 0;
+
     return {
-      id: job.id,
+      id: job.id!,
       state,
       progress,
       data: job.data,
-      returnvalue: job.returnvalue,
-      failedReason: job.failedReason,
+      returnvalue: job.returnvalue ?? undefined,
+      failedReason: job.failedReason ?? undefined,
       timestamp: job.timestamp,
       processedOn: job.processedOn,
       finishedOn: job.finishedOn,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get job status', error, { jobId });
     return null;
   }
@@ -147,7 +165,7 @@ export async function getQueueMetrics() {
     logger.debug('Queue metrics', metrics);
     
     return metrics;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get queue metrics', error);
     throw error;
   }
@@ -161,7 +179,7 @@ export async function cleanCompletedJobs(olderThanMs: number = 24 * 3600 * 1000)
     const jobs = await videoQueue.clean(olderThanMs, 100, 'completed');
     logger.info('Cleaned completed jobs', { count: jobs.length });
     return jobs;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to clean completed jobs', error);
     throw error;
   }
@@ -175,7 +193,7 @@ export async function cleanFailedJobs(olderThanMs: number = 7 * 24 * 3600 * 1000
     const jobs = await videoQueue.clean(olderThanMs, 100, 'failed');
     logger.info('Cleaned failed jobs', { count: jobs.length });
     return jobs;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to clean failed jobs', error);
     throw error;
   }

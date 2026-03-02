@@ -62,16 +62,17 @@ export async function uploadFile(
     
     return await uploadBuffer(fileBuffer, key);
     
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'ENOENT') {
       logger.storageError('upload', error, { filePath });
       throw new StorageError(`File not found: ${filePath}`, { operation: 'upload', filePath });
     }
     
     logger.storageError('upload', error, { filePath, folder });
-    throw error instanceof StorageError 
-      ? error 
-      : new StorageError(`Failed to upload file: ${error.message}`, { operation: 'upload', filePath });
+    throw error instanceof StorageError
+      ? error
+      : new StorageError(`Failed to upload file: ${message}`, { operation: 'upload', filePath });
   }
 }
 
@@ -123,11 +124,12 @@ export async function uploadBuffer(
       bucket: STORAGE_CONFIG.bucket,
       publicUrl,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.storageError('upload', error, { size: buffer.length });
-    throw new StorageError(`Failed to upload buffer: ${error.message}`, { 
+    throw new StorageError(`Failed to upload buffer: ${message}`, {
       operation: 'upload',
-      size: buffer.length 
+      size: buffer.length,
     });
   }
 }
@@ -181,11 +183,12 @@ export async function getSignedDownloadUrl(
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
     
     return signedUrl;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.storageError('getSignedUrl', error, { key });
-    throw new StorageError(`Failed to generate signed URL: ${error.message}`, { 
+    throw new StorageError(`Failed to generate signed URL: ${message}`, {
       operation: 'getSignedUrl',
-      key 
+      key,
     });
   }
 }
@@ -206,11 +209,12 @@ export async function deleteFile(key: string): Promise<void> {
     
     await s3Client.send(command);
     logger.info('File deleted', { key });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.storageError('delete', error, { key });
-    throw new StorageError(`Failed to delete file: ${error.message}`, { 
+    throw new StorageError(`Failed to delete file: ${message}`, {
       operation: 'delete',
-      key 
+      key,
     });
   }
 }
@@ -236,15 +240,15 @@ export async function deleteByUrl(url: string): Promise<void> {
     }
     
     await deleteFile(key);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof ValidationError || error instanceof StorageError) {
       throw error;
     }
-    
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.storageError('deleteByUrl', error, { url });
-    throw new StorageError(`Failed to delete file by URL: ${error.message}`, { 
+    throw new StorageError(`Failed to delete file by URL: ${message}`, {
       operation: 'deleteByUrl',
-      url 
+      url,
     });
   }
 }
@@ -305,8 +309,9 @@ export async function getFileSize(key: string): Promise<number> {
     
     const response = await s3Client.send(command);
     return response.ContentLength || 0;
-  } catch (error: any) {
-    logger.warn('Failed to get file size', { key, error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.warn('Failed to get file size', { key, error: message });
     return 0;
   }
 }
@@ -350,14 +355,14 @@ export async function copyFile(sourceKey: string, destKey: string): Promise<void
     
     await s3Client.send(putCommand);
     logger.info('File copied', { sourceKey, destKey });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof StorageError) throw error;
-    
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.storageError('copy', error, { sourceKey, destKey });
-    throw new StorageError(`Failed to copy file: ${error.message}`, { 
+    throw new StorageError(`Failed to copy file: ${message}`, {
       operation: 'copy',
       sourceKey,
-      destKey 
+      destKey,
     });
   }
 }

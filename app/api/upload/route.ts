@@ -4,10 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { nanoid } from 'nanoid';
-import { uploadBuffer } from '@/lib/storage';
+import { uploadBuffer, type StorageFolder } from '@/lib/storage';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -46,9 +43,9 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     
     // Загружаем в хранилище
-    const folder = type === 'avatar' ? 'avatars' : type === 'background' ? 'backgrounds' : 'temp';
-    const result = await uploadBuffer(buffer, file.name, folder as any);
-    
+    const folder: StorageFolder = type === 'avatar' ? 'avatars' : type === 'background' ? 'backgrounds' : 'temp';
+    const result = await uploadBuffer(buffer, file.name, folder);
+
     console.log(`✅ File uploaded: ${result.publicUrl}`);
     
     return NextResponse.json({
@@ -59,10 +56,11 @@ export async function POST(req: NextRequest) {
       type: file.type,
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Upload failed', message: error.message },
+      { error: 'Upload failed', message },
       { status: 500 }
     );
   }

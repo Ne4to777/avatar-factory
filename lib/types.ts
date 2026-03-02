@@ -114,7 +114,7 @@ export interface StorageConfig {
 // API Response Types
 // ==========================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -125,6 +125,13 @@ export interface VideoCreateResponse {
   videoId: string;
   status: VideoStatus;
   message: string;
+}
+
+export interface VideoJobStatus {
+  id: string;
+  state: string;
+  progress: number;
+  data?: unknown;
 }
 
 export interface VideoStatusResponse {
@@ -141,7 +148,7 @@ export interface VideoStatusResponse {
     createdAt: Date;
     processedAt: Date | null;
   };
-  job: any | null;
+  job: VideoJobStatus | null;
 }
 
 // ==========================================
@@ -152,7 +159,7 @@ export interface ErrorContext {
   videoId?: string;
   userId?: string;
   operation?: string;
-  [key: string]: any; // Allow any additional properties
+  [key: string]: unknown;
 }
 
 export class AvatarFactoryError extends Error {

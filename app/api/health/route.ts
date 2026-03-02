@@ -17,6 +17,16 @@ const redis = new Redis({
   port: parseInt(process.env.REDIS_PORT || '6379'),
 });
 
+interface HealthMetrics {
+  timestamp: string;
+  queue?: Awaited<ReturnType<typeof getQueueMetrics>>;
+  gpu?: Awaited<ReturnType<typeof getGPUMetrics>>;
+  videos?: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+}
+
 async function checkStorage(): Promise<boolean> {
   try {
     const s3 = createS3Client();
@@ -37,7 +47,7 @@ export async function GET(req: NextRequest) {
       storage: false,
     };
     
-    const metrics: any = {
+    const metrics: HealthMetrics = {
       timestamp: new Date().toISOString(),
     };
     
@@ -99,12 +109,13 @@ export async function GET(req: NextRequest) {
       version: '1.0.0',
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Health check error:', error);
     return NextResponse.json(
       {
         status: 'error',
-        error: error.message,
+        error: message,
       },
       { status: 500 }
     );

@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Video } from '@prisma/client';
 import { VideoService } from '@/lib/services/video.service';
 import { prisma } from '@/lib/prisma';
-import { addVideoJob, getJobStatus } from '@/lib/queue';
+import { addVideoJob, getJobStatus, type VideoJobData, type VideoJobResult } from '@/lib/queue';
 import { deleteByUrl } from '@/lib/storage';
+import type { Job } from 'bullmq';
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -74,8 +76,8 @@ describe('VideoService', () => {
         updatedAt: new Date(),
       };
 
-      vi.mocked(prisma.video.create).mockResolvedValue(mockVideo as any);
-      vi.mocked(addVideoJob).mockResolvedValue({} as any);
+      vi.mocked(prisma.video.create).mockResolvedValue(mockVideo as Video);
+      vi.mocked(addVideoJob).mockResolvedValue({ id: 'job-1' } as Job<VideoJobData, VideoJobResult>);
 
       const result = await service.createVideo(input);
 
@@ -121,17 +123,24 @@ describe('VideoService', () => {
         errorMessage: null,
       };
 
-      vi.mocked(prisma.video.findUnique).mockResolvedValue(mockVideo as any);
+      vi.mocked(prisma.video.findUnique).mockResolvedValue(mockVideo as Video);
       vi.mocked(getJobStatus).mockResolvedValue({
         id: videoId,
         state: 'active',
         progress: 75,
-        data: {},
-        returnvalue: null,
-        failedReason: null,
+        data: {
+          videoId,
+          userId: 'user-123',
+          text: 'Hello',
+          backgroundStyle: 'simple' as const,
+          voiceId: 'ru_speaker',
+          format: 'VERTICAL' as const,
+        },
+        returnvalue: undefined,
+        failedReason: undefined,
         timestamp: 0,
         processedOn: 0,
-        finishedOn: null,
+        finishedOn: undefined,
       });
 
       const status = await service.getVideoStatus(videoId);
@@ -159,9 +168,9 @@ describe('VideoService', () => {
         thumbnailUrl: 'http://storage.com/thumb.jpg',
       };
 
-      vi.mocked(prisma.video.findUnique).mockResolvedValue(mockVideo as any);
+      vi.mocked(prisma.video.findUnique).mockResolvedValue(mockVideo as Video);
       vi.mocked(deleteByUrl).mockResolvedValue(undefined);
-      vi.mocked(prisma.video.delete).mockResolvedValue(mockVideo as any);
+      vi.mocked(prisma.video.delete).mockResolvedValue(mockVideo as Video);
 
       await service.deleteVideo(videoId);
 

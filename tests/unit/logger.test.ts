@@ -7,10 +7,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { logger, LogLevel } from '@/lib/logger';
 
 describe('Logger', () => {
-  let consoleLogSpy: any;
-  let consoleErrorSpy: any;
-  let consoleWarnSpy: any;
-  let consoleDebugSpy: any;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let consoleDebugSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -95,7 +95,7 @@ describe('Logger', () => {
     });
 
     it('should handle errors without stack', () => {
-      const error: any = { message: 'Simple error' };
+      const error: { message: string } = { message: 'Simple error' };
       logger.error('Failed', error);
       
       expect(consoleErrorSpy).toHaveBeenCalledOnce();
