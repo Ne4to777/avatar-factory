@@ -83,20 +83,22 @@ async function testAPI() {
       
       const createData = await createResponse.json();
       
-      if (createData.success && createData.videoId) {
+      const videoId = createData.data?.videoId ?? createData.videoId;
+      if (createData.success && videoId) {
         console.log('✅ Videos Create API: OK');
-        console.log('   Video ID:', createData.videoId);
-        
+        console.log('   Video ID:', videoId);
+
         // 6. Тест Get Video Status
         console.log('\n6️⃣  Testing Get Video Status API...');
-        const statusResponse = await fetch(`${BASE_URL}/api/videos/${createData.videoId}`);
+        const statusResponse = await fetch(`${BASE_URL}/api/videos/${videoId}`);
         const statusData = await statusResponse.json();
-        
-        if (statusData.video) {
+        const video = statusData.data ?? statusData.video;
+
+        if (video) {
           console.log('✅ Get Video Status API: OK');
-          console.log('   Status:', statusData.video.status);
-          console.log('   Progress:', statusData.video.progress + '%');
-          console.log('   Text:', statusData.video.text.substring(0, 50) + '...');
+          console.log('   Status:', video.status);
+          console.log('   Progress:', (video.progress ?? 0) + '%');
+          if (video.text) console.log('   Text:', video.text.substring(0, 50) + '...');
         } else {
           console.log('❌ Get Video Status API: Failed');
         }

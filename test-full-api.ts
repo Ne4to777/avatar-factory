@@ -168,9 +168,10 @@ async function testCreateVideo(photoUrl: string): Promise<string | null> {
     
     if (response.ok) {
       log(`✓ Video job created: ${response.status}`, 'green');
-      log(`  Video ID: ${data.videoId}`, 'green');
-      log(`  Status: ${data.status}`, 'green');
-      return data.videoId;
+      const videoId = data.data?.videoId ?? data.videoId;
+      log(`  Video ID: ${videoId}`, 'green');
+      log(`  Status: ${data.status ?? 'pending'}`, 'green');
+      return videoId;
     } else {
       log(`✗ Create video failed: ${data.error}`, 'red');
       console.log(data);
@@ -194,14 +195,15 @@ async function testVideoStatus(videoId: string) {
     const data = await response.json();
     
     if (response.ok) {
-      log(`✓ Video status: ${data.video.status}`, 'green');
-      log(`  Progress: ${data.video.progress}%`, 'green');
-      
-      if (data.video.status === 'COMPLETED') {
-        log(`  Video URL: ${data.video.videoUrl}`, 'green');
+      const video = data.data ?? data.video;
+      log(`✓ Video status: ${video?.status}`, 'green');
+      log(`  Progress: ${video?.progress ?? 0}%`, 'green');
+
+      if (video?.status === 'COMPLETED') {
+        log(`  Video URL: ${video.videoUrl}`, 'green');
       }
-      
-      return data.video;
+
+      return video;
     } else {
       log(`✗ Status check failed`, 'red');
       return null;

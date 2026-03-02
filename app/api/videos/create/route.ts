@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { addVideoJob } from '@/lib/queue';
+import { VideoService } from '@/lib/services/video.service';
 
 const createVideoSchema = z.object({
   text: z.string().min(1).max(500),
@@ -20,14 +20,13 @@ const createVideoSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Парсинг и валидация входных данных
     const body = await req.json();
-    const data = createVideoSchema.parse(body);
-    
-    // TODO: Получить userId из сессии (пока создаем тестового пользователя)
+    const validatedData = createVideoSchema.parse(body);
+
+    // TODO: Get userId from auth session
     let userId = 'test-user-id';
-    
-    // Создаем тестового пользователя если не существует
+
+    // Ensure test user exists
     const testUser = await prisma.user.upsert({
       where: { id: userId },
       update: {},
@@ -37,67 +36,37 @@ export async function POST(req: NextRequest) {
         name: 'Test User',
       },
     });
-    
+
     userId = testUser.id;
-    
-    // Проверка: должен быть либо photoUrl, либо avatarId
-    if (!data.photoUrl && !data.avatarId) {
+
+    if (!validatedData.photoUrl && !validatedData.avatarId) {
       return NextResponse.json(
         { error: 'Either photoUrl or avatarId must be provided' },
         { status: 400 }
       );
     }
-    
-    // Создаем запись в БД
-    const video = await prisma.video.create({
-      data: {
-        userId,
-        text: data.text,
-        photoUrl: data.photoUrl,
-        avatarId: data.avatarId,
-        backgroundStyle: data.backgroundStyle,
-        backgroundUrl: data.backgroundUrl,
-        voiceId: data.voiceId,
-        format: data.format,
-        status: 'PENDING',
-        progress: 0,
-      },
-    });
-    
-    // Добавляем задачу в очередь
-    await addVideoJob({
-      videoId: video.id,
+
+    const videoService = new VideoService();
+    const video = await videoService.createVideo({
       userId,
-      text: data.text,
-      photoUrl: data.photoUrl,
-      avatarId: data.avatarId,
-      backgroundStyle: data.backgroundStyle,
-      backgroundUrl: data.backgroundUrl,
-      voiceId: data.voiceId,
-      format: data.format,
+      ...validatedData,
     });
-    
-    console.log(`✅ Video job created: ${video.id}`);
-    
+
     return NextResponse.json({
       success: true,
-      videoId: video.id,
-      status: 'pending',
-      message: 'Video generation started',
+      data: { videoId: video.id },
     });
-    
-  } catch (error: any) {
-    console.error('Create video error:', error);
-    
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid input', details: error.errors },
         { status: 400 }
       );
     }
-    
+
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      { error: 'Internal server error', message },
       { status: 500 }
     );
   }

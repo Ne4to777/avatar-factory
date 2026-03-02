@@ -79,7 +79,7 @@ async function testVideoGeneration() {
       format: 'VERTICAL'
     });
 
-    const videoId = createRes.data.videoId;
+    const videoId = createRes.data.data?.videoId ?? createRes.data.videoId;
     console.log(`✅ Video job created: ${videoId}`);
     console.log(`   Status: ${createRes.data.status}\n`);
 
@@ -92,32 +92,32 @@ async function testVideoGeneration() {
 
     while (Date.now() - startTime < MAX_WAIT_TIME) {
       const statusRes = await axios.get(`${API_URL}/api/videos/${videoId}`);
-      const video = statusRes.data.video; // API возвращает { video: {...}, job: {...} }
+      const video = statusRes.data.data ?? statusRes.data.video;
 
-      if (video.status !== lastStatus) {
+      if (video?.status !== lastStatus) {
         const elapsed = Math.round((Date.now() - startTime) / 1000);
-        console.log(`   [${elapsed}s] Status: ${video.status}`);
-        if (video.errorMessage) {
-          console.log(`   ❌ Error: ${video.errorMessage}`);
+        console.log(`   [${elapsed}s] Status: ${video?.status}`);
+        if (video?.error ?? video?.errorMessage) {
+          console.log(`   ❌ Error: ${video?.error ?? video?.errorMessage}`);
         }
-        if (video.progress) {
+        if (video?.progress != null) {
           console.log(`   Progress: ${video.progress}%`);
         }
-        lastStatus = video.status;
+        lastStatus = video?.status ?? '';
       }
 
-      if (video.status === 'COMPLETED') {
+      if (video?.status === 'COMPLETED') {
         console.log(`\n✅ VIDEO GENERATED SUCCESSFULLY!`);
         console.log(`   Video URL: ${video.videoUrl}`);
         console.log(`   Thumbnail: ${video.thumbnailUrl}`);
-        console.log(`   Duration: ${video.duration}s`);
-        console.log(`   Format: ${video.format}\n`);
+        if (video.duration != null) console.log(`   Duration: ${video.duration}s`);
+        if (video.format) console.log(`   Format: ${video.format}\n`);
         return true;
       }
 
-      if (video.status === 'FAILED') {
+      if (video?.status === 'FAILED') {
         console.log(`\n❌ VIDEO GENERATION FAILED`);
-        console.log(`   Error: ${video.errorMessage}\n`);
+        console.log(`   Error: ${video?.error ?? video?.errorMessage ?? 'Unknown'}\n`);
         return false;
       }
 

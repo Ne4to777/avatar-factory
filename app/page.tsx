@@ -82,10 +82,11 @@ export default function HomePage() {
       }
       
       const createData = await createRes.json();
-      setVideoId(createData.videoId);
-      
+      const newVideoId = createData.data?.videoId ?? createData.videoId;
+      setVideoId(newVideoId);
+
       // 3. Отслеживаем прогресс
-      const cleanup = await pollVideoStatus(createData.videoId);
+      const cleanup = await pollVideoStatus(newVideoId);
       setCleanupPoll(() => cleanup);
 
     } catch (err: any) {
@@ -102,27 +103,28 @@ export default function HomePage() {
       try {
         const res = await fetch(`/api/videos/${id}`);
         const data = await res.json();
+        const video = data.data ?? data.video;
 
-        setProgress(data.video.progress);
+        setProgress(video?.progress ?? 0);
 
-        if (data.video.status === 'COMPLETED') {
+        if (video?.status === 'COMPLETED') {
           if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
           }
-          setVideoUrl(data.video.videoUrl);
+          setVideoUrl(video.videoUrl);
           setStatus('idle');
-          return data.video.status;
-        } else if (data.video.status === 'FAILED') {
+          return video.status;
+        } else if (video?.status === 'FAILED') {
           if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
           }
-          setError(data.video.errorMessage || 'Ошибка генерации');
+          setError(video.error ?? video.errorMessage ?? 'Ошибка генерации');
           setStatus('idle');
-          return data.video.status;
+          return video.status;
         }
-        return data.video.status;
+        return video?.status ?? 'PENDING';
       } catch (err) {
         console.error('Polling error:', err);
         setError('Не удалось проверить статус видео');
