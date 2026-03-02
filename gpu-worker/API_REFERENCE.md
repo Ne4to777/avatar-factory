@@ -309,6 +309,134 @@ curl -X POST "http://localhost:8001/api/generate-video-api" \
 
 ---
 
+## 🔄 Video Status Polling
+
+### `GET /api/video-status/{task_id}`
+
+Проверка статуса генерации видео (для async workflow).
+
+**Parameters:**
+- `task_id` (path, required): ID задачи из `/api/generate-video-api`
+
+**Example:**
+```bash
+curl http://localhost:8001/api/video-status/task_abc123 \
+  -H "x-api-key: your-key"
+```
+
+**Response (processing):**
+```json
+{
+  "task_id": "task_abc123",
+  "status": "processing",
+  "progress_percent": 45,
+  "estimated_time_remaining": 30
+}
+```
+
+**Response (completed):**
+```json
+{
+  "task_id": "task_abc123",
+  "status": "completed",
+  "progress_percent": 100,
+  "video_url": "https://storage.polza.ai/videos/abc123.mp4"
+}
+```
+
+**Response (failed):**
+```json
+{
+  "task_id": "task_abc123",
+  "status": "failed",
+  "error": "Content policy violation / Invalid prompt"
+}
+```
+
+**Statuses:**
+- `processing` - В процессе генерации
+- `completed` - Готово, можно скачать
+- `failed` - Ошибка генерации
+
+**Recommended polling interval:** 10-15 секунд
+
+---
+
+## 📥 Video Download
+
+### `GET /api/video-download/{task_id}`
+
+Скачивание готового видео.
+
+**Prerequisites:** Status должен быть `completed`
+
+**Example:**
+```bash
+curl http://localhost:8001/api/video-download/task_abc123 \
+  -H "x-api-key: your-key" \
+  --output video.mp4
+```
+
+**Response:** Видео файл (MP4)
+
+**Errors:**
+- `400` - Video not ready (status != completed)
+- `404` - Task not found
+- `500` - Download failed
+
+---
+
+## ⏳ Video Generation with Wait
+
+### `POST /api/generate-video-wait`
+
+Генерация видео с автоматическим polling (блокирующий endpoint).
+
+**Parameters:**
+- `prompt` (query, required): Описание видео
+- `keyframe` (file, optional): Референсное изображение
+- `duration` (query, optional): Длительность (5-10 сек). Default: 5
+- `model` (query, optional): Модель. Default: `veo-fast`
+- `max_wait_seconds` (query, optional): Максимум ожидания. Default: 300
+- `poll_interval` (query, optional): Интервал проверки. Default: 10
+
+**Example:**
+```bash
+curl -X POST "http://localhost:8001/api/generate-video-wait" \
+  -H "x-api-key: your-key" \
+  -F "prompt=person walking in a park" \
+  -F "duration=5" \
+  -F "model=veo-fast" \
+  -F "max_wait_seconds=300" \
+  -F "poll_interval=10" \
+  --output video.mp4
+```
+
+**Response (success):** Видео файл сразу после готовности
+
+**Response (timeout):**
+```json
+{
+  "error": "timeout",
+  "message": "Video generation exceeded 300s",
+  "task_id": "task_abc123",
+  "last_status": "processing",
+  "suggestion": "Use /api/video-status/{task_id} to check manually"
+}
+```
+
+**Use cases:**
+- ✅ CLI scripts и автоматизация
+- ✅ Простые одноразовые генерации
+- ❌ Production с высокой нагрузкой (используйте async)
+
+**Недостатки:**
+- Блокирует HTTP соединение на 5+ минут
+- Может упасть по timeout
+- Не масштабируется
+
+---
+
 ## 🔄 Hybrid Pipeline
 
 ### `POST /api/pipeline`

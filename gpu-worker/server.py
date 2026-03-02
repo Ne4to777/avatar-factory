@@ -1074,6 +1074,235 @@ async def generate_video_api(
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=f"Video generation error: {str(e)}")
 
+@app.get("/api/video-status/{task_id}")
+async def get_video_status(
+    task_id: str,
+    x_api_key: str = Header()
+):
+    """
+    Проверка статуса генерации видео
+    
+    Статусы:
+    - processing: В процессе генерации
+    - completed: Готово, можно скачать
+    - failed: Ошибка генерации
+    """
+    verify_api_key(x_api_key)
+    
+    if not POLZA_API_KEY:
+        raise HTTPException(status_code=503, detail="POLZA_API_KEY not configured")
+    
+    try:
+        logger.info(f"Checking video status: task_id={task_id}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{POLZA_BASE_URL}/video/status/{task_id}",
+                headers={"Authorization": f"Bearer {POLZA_API_KEY}"}
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Status check error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Status check error: {response.text}"
+                )
+            
+            result = response.json()
+            status = result.get("status", "unknown")
+            
+            logger.info(f"Video status: {status} (task_id={task_id})")
+            
+            return {
+                "task_id": task_id,
+                "status": status,
+                "progress_percent": result.get("progress", 0),
+                "video_url": result.get("video_url"),
+                "error": result.get("error"),
+                "estimated_time_remaining": result.get("eta_seconds")
+            }
+    
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error checking status: {e}")
+        raise HTTPException(status_code=503, detail=f"Status check connection error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Status check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Status check error: {str(e)}")
+
+@app.get("/api/video-download/{task_id}")
+async def download_video(
+    task_id: str,
+    x_api_key: str = Header()
+):
+    """
+    Скачивание готового видео
+    
+    Сначала проверьте статус через /api/video-status/{task_id}
+    """
+    verify_api_key(x_api_key)
+    
+    if not POLZA_API_KEY:
+        raise HTTPException(status_code=503, detail="POLZA_API_KEY not configured")
+    
+    try:
+        logger.info(f"Downloading video: task_id={task_id}")
+        
+        # Проверка статуса
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            status_response = await client.get(
+                f"{POLZA_BASE_URL}/video/status/{task_id}",
+                headers={"Authorization": f"Bearer {POLZA_API_KEY}"}
+            )
+            
+            if status_response.status_code != 200:
+                raise HTTPException(status_code=status_response.status_code, detail="Failed to check status")
+            
+            status_data = status_response.json()
+            
+            if status_data.get("status") != "completed":
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Video not ready yet. Status: {status_data.get('status')}"
+                )
+            
+            video_url = status_data.get("video_url")
+            if not video_url:
+                raise HTTPException(status_code=500, detail="Video URL not available")
+            
+            # Скачивание видео
+            logger.info(f"Downloading from: {video_url}")
+            
+            video_response = await client.get(video_url, timeout=300.0)
+            
+            if video_response.status_code != 200:
+                raise HTTPException(status_code=500, detail="Failed to download video")
+            
+            # Сохранить локально
+            video_path = TEMP_DIR / f"video_{task_id}_{os.urandom(4).hex()}.mp4"
+            with open(video_path, "wb") as f:
+                f.write(video_response.content)
+            
+            logger.info(f"✅ Video downloaded: {video_path.name} ({video_path.stat().st_size / 1e6:.1f} MB)")
+            
+            # Streaming response для надежной передачи
+            def iterfile():
+                with open(video_path, "rb") as f:
+                    chunk_size = 64 * 1024
+                    while chunk := f.read(chunk_size):
+                        yield chunk
+                # Cleanup после отправки
+                video_path.unlink()
+                logger.info(f"Cleaned up downloaded video: {video_path.name}")
+            
+            return StreamingResponse(
+                iterfile(),
+                media_type="video/mp4",
+                headers={
+                    "Content-Disposition": f"attachment; filename=video_{task_id}.mp4"
+                }
+            )
+    
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error downloading video: {e}")
+        raise HTTPException(status_code=503, detail=f"Download connection error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Video download failed: {e}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Download error: {str(e)}")
+
+@app.post("/api/generate-video-wait")
+async def generate_video_wait(
+    prompt: str = Query(..., description="Video generation prompt"),
+    keyframe: Optional[UploadFile] = File(None, description="Reference image"),
+    duration: int = Query(5, description="Video duration in seconds (5-10)"),
+    model: str = Query("veo-fast", description="Model: veo-fast, kling, veo-quality"),
+    max_wait_seconds: int = Query(300, description="Maximum wait time (default 5 min)"),
+    poll_interval: int = Query(10, description="Polling interval in seconds"),
+    x_api_key: str = Header()
+):
+    """
+    Генерация видео с автоматическим polling (блокирующий endpoint)
+    
+    Запускает генерацию и ждет готовности с периодической проверкой.
+    Возвращает готовое видео или timeout.
+    
+    Для длительных операций используйте /api/generate-video-api + /api/video-status
+    """
+    verify_api_key(x_api_key)
+    
+    if not POLZA_API_KEY:
+        raise HTTPException(status_code=503, detail="POLZA_API_KEY not configured")
+    
+    try:
+        # Запуск генерации
+        logger.info(f"Video generation with wait: model={model}, max_wait={max_wait_seconds}s")
+        
+        # Используем существующий endpoint
+        from fastapi import Request
+        from starlette.datastructures import Headers
+        
+        # Создаем запрос для generate_video_api
+        generation_response = await generate_video_api(
+            prompt=prompt,
+            keyframe=keyframe,
+            duration=duration,
+            model=model,
+            x_api_key=x_api_key
+        )
+        
+        task_id = generation_response["task_id"]
+        estimated_time = generation_response["estimated_time_seconds"]
+        
+        logger.info(f"Task started: {task_id}, estimated: {estimated_time}s")
+        
+        # Polling loop
+        import asyncio
+        waited = 0
+        last_status = "processing"
+        
+        while waited < max_wait_seconds:
+            await asyncio.sleep(poll_interval)
+            waited += poll_interval
+            
+            # Проверка статуса
+            status_response = await get_video_status(task_id, x_api_key)
+            current_status = status_response["status"]
+            
+            logger.info(f"Polling: {waited}s/{max_wait_seconds}s, status={current_status}")
+            
+            if current_status == "completed":
+                logger.info(f"✅ Video ready after {waited}s")
+                
+                # Скачать и вернуть
+                return await download_video(task_id, x_api_key)
+            
+            elif current_status == "failed":
+                error_msg = status_response.get("error", "Unknown error")
+                logger.error(f"❌ Video generation failed: {error_msg}")
+                raise HTTPException(status_code=500, detail=f"Generation failed: {error_msg}")
+            
+            last_status = current_status
+        
+        # Timeout
+        logger.warning(f"⏱️ Timeout after {waited}s, status={last_status}")
+        raise HTTPException(
+            status_code=408,
+            detail={
+                "error": "timeout",
+                "message": f"Video generation exceeded {max_wait_seconds}s",
+                "task_id": task_id,
+                "last_status": last_status,
+                "suggestion": "Use /api/video-status/{task_id} to check status manually"
+            }
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Generate-and-wait failed: {e}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Generation error: {str(e)}")
+
 @app.post("/api/pipeline")
 async def hybrid_pipeline(
     audio: Optional[UploadFile] = File(None, description="Audio file for STT"),
