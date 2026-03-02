@@ -284,7 +284,6 @@ export default function HomePage() {
               >
                 <option value="ru_speaker_female">Женский</option>
                 <option value="ru_speaker_male">Мужской</option>
-                <option value="ru_speaker_female_2">Женский 2</option>
               </select>
             </div>
           </div>
