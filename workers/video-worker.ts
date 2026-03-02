@@ -9,6 +9,10 @@ import path from 'path';
 import Redis from 'ioredis';
 import { prisma } from '../lib/prisma';
 import { gpuClient } from '../lib/gpu-client';
+import {
+  BACKGROUND_STYLE_MAP,
+  BACKGROUND_PROMPTS,
+} from '../lib/config';
 import { composeVideo, generateThumbnail, getVideoInfo, ensureTempDir } from '../lib/video';
 import { uploadVideo, uploadThumbnail, deleteFile } from '../lib/storage';
 import type { VideoJobData, VideoJobResult } from '../lib/queue';
@@ -306,19 +310,9 @@ function getBackgroundDimensions(format: 'VERTICAL' | 'HORIZONTAL' | 'SQUARE') {
   return dimensions[format];
 }
 
-function getBackgroundPrompt(style: string): string {
-  const prompts: Record<string, string> = {
-    'modern-office': 'modern minimalist office, clean desk, large window, natural light, professional, 4k',
-    'cozy-home': 'cozy living room, warm lighting, bookshelf, plants, comfortable atmosphere, 4k',
-    'outdoor-nature': 'beautiful nature scene, mountains, forest, sunset, peaceful, 4k',
-    'tech-studio': 'futuristic tech studio, neon lights, cyberpunk, modern equipment, 4k',
-    'cafe': 'cozy coffee shop interior, wooden tables, warm lighting, aesthetic, 4k',
-    'library': 'beautiful library with books, warm lighting, scholarly atmosphere, 4k',
-    'beach': 'tropical beach, palm trees, clear water, sunny day, paradise, 4k',
-    'city': 'modern city skyline, skyscrapers, urban landscape, blue hour, 4k',
-  };
-  
-  return prompts[style] || prompts['modern-office'];
+function getBackgroundPrompt(styleAPI: string): string {
+  const internalStyle = BACKGROUND_STYLE_MAP[styleAPI as keyof typeof BACKGROUND_STYLE_MAP];
+  return BACKGROUND_PROMPTS[internalStyle] || BACKGROUND_PROMPTS['modern-office'];
 }
 
 async function cleanupTempFiles(filePaths: string[]) {

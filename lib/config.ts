@@ -135,6 +135,27 @@ export const VOICE_CONFIG = {
 } as const;
 
 // ==========================================
+// Background Style Configuration
+// ==========================================
+
+export const BACKGROUND_STYLE_MAP = {
+  simple: 'modern-office',
+  professional: 'corporate-meeting',
+  creative: 'artistic-studio',
+  minimalist: 'clean-workspace',
+} as const;
+
+export type BackgroundStyleAPI = keyof typeof BACKGROUND_STYLE_MAP;
+export type BackgroundStyleInternal = (typeof BACKGROUND_STYLE_MAP)[BackgroundStyleAPI];
+
+export const BACKGROUND_PROMPTS: Record<BackgroundStyleInternal, string> = {
+  'modern-office': 'modern minimalist office, soft lighting, professional, 4k',
+  'corporate-meeting': 'elegant corporate meeting room, glass walls, sophisticated, 4k',
+  'artistic-studio': 'creative art studio, colorful, inspiring, natural light, 4k',
+  'clean-workspace': 'minimalist clean workspace, zen, peaceful, soft colors, 4k',
+};
+
+// ==========================================
 // Validation Helpers
 // ==========================================
 

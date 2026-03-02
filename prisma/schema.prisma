@@ -53,7 +53,7 @@ model Video {
   text            String   @db.Text
   photoUrl        String?
   voiceId         String   @default("ru_speaker_female")
-  backgroundStyle String   @default("modern-office")
+  backgroundStyle String   @default("simple")
   backgroundUrl   String?
   
   // Processing

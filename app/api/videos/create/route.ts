@@ -12,7 +12,7 @@ const createVideoSchema = z.object({
   text: z.string().min(1).max(500),
   photoUrl: z.string().url().optional(),
   avatarId: z.string().optional(),
-  backgroundStyle: z.enum(['simple', 'professional', 'creative', 'minimalist']).default('professional'),
+  backgroundStyle: z.enum(['simple', 'professional', 'creative', 'minimalist']).default('simple'),
   backgroundUrl: z.string().url().optional(),
   voiceId: z.string().default('ru_speaker_female'),
   format: z.enum(['VERTICAL', 'HORIZONTAL', 'SQUARE']).default('VERTICAL'),

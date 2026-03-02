@@ -9,6 +9,8 @@ import {
   VIDEO_CONFIG,
   VOICE_CONFIG,
   QUEUE_CONFIG,
+  BACKGROUND_STYLE_MAP,
+  BACKGROUND_PROMPTS,
   validateVideoFormat,
   validateTextLength,
   validateUrl,
@@ -67,6 +69,22 @@ describe('Configuration', () => {
       expect(QUEUE_CONFIG.VIDEO_GENERATION.concurrency).toBe(2);
       expect(QUEUE_CONFIG.VIDEO_GENERATION.maxRetries).toBe(3);
       expect(QUEUE_CONFIG.DEFAULT_PRIORITY).toBe(10);
+    });
+  });
+
+  describe('Background Style Configuration', () => {
+    it('should map API styles to internal styles', () => {
+      expect(BACKGROUND_STYLE_MAP.simple).toBe('modern-office');
+      expect(BACKGROUND_STYLE_MAP.professional).toBe('corporate-meeting');
+      expect(BACKGROUND_STYLE_MAP.creative).toBe('artistic-studio');
+      expect(BACKGROUND_STYLE_MAP.minimalist).toBe('clean-workspace');
+    });
+
+    it('should have prompts for all internal styles', () => {
+      Object.values(BACKGROUND_STYLE_MAP).forEach((internalStyle) => {
+        expect(BACKGROUND_PROMPTS[internalStyle]).toBeDefined();
+        expect(BACKGROUND_PROMPTS[internalStyle]).toContain('4k');
+      });
     });
   });
 });
