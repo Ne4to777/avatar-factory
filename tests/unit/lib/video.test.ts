@@ -31,7 +31,7 @@ const mockCommandInstance = createMockCommand();
 vi.mock('fluent-ffmpeg', () => {
   const ffprobe = vi.fn();
   const mockDefault = vi.fn(() => mockCommandInstance);
-  (mockDefault as { ffprobe: typeof ffprobe }).ffprobe = ffprobe;
+  (mockDefault as unknown as { ffprobe: typeof ffprobe }).ffprobe = ffprobe;
   return {
     default: mockDefault,
   };
@@ -63,8 +63,9 @@ vi.mock('nanoid', () => ({
 const fs = await import('fs');
 const { promises: fsPromises } = fs;
 const ffmpegModule = await import('fluent-ffmpeg');
-const ffprobeMock = (ffmpegModule.default as { ffprobe: ReturnType<typeof vi.fn> })
-  .ffprobe;
+const ffprobeMock = (
+  ffmpegModule.default as unknown as { ffprobe: ReturnType<typeof vi.fn> }
+).ffprobe;
 
 describe('lib/video', () => {
   beforeEach(() => {
@@ -441,7 +442,11 @@ describe('lib/video', () => {
     it('should delete files older than maxAgeHours', async () => {
       const oldFile = 'old_video.mp4';
       const newFile = 'new_video.mp4';
-      vi.mocked(fsPromises.readdir).mockResolvedValue([oldFile, newFile]);
+      vi.mocked(fsPromises.readdir).mockResolvedValue(
+        [oldFile, newFile] as unknown as Awaited<
+          ReturnType<typeof fsPromises.readdir>
+        >
+      );
       vi.mocked(fsPromises.stat)
         .mockResolvedValueOnce({
           mtimeMs: Date.now() - 25 * 60 * 60 * 1000,
@@ -462,7 +467,11 @@ describe('lib/video', () => {
     });
 
     it('should not delete files newer than maxAgeHours', async () => {
-      vi.mocked(fsPromises.readdir).mockResolvedValue(['recent.mp4']);
+      vi.mocked(fsPromises.readdir).mockResolvedValue(
+        ['recent.mp4'] as unknown as Awaited<
+          ReturnType<typeof fsPromises.readdir>
+        >
+      );
       vi.mocked(fsPromises.stat).mockResolvedValue({
         mtimeMs: Date.now() - 1 * 60 * 60 * 1000, // 1 hour ago
       } as unknown as import('fs').Stats);
@@ -473,7 +482,9 @@ describe('lib/video', () => {
     });
 
     it('should use default 24 hours when maxAgeHours not provided', async () => {
-      vi.mocked(fsPromises.readdir).mockResolvedValue([]);
+      vi.mocked(fsPromises.readdir).mockResolvedValue(
+        [] as unknown as Awaited<ReturnType<typeof fsPromises.readdir>>
+      );
 
       await cleanupTempFiles();
 
