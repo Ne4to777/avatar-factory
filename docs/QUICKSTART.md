@@ -9,7 +9,7 @@
 ├─ Next.js            ├─ Python FastAPI
 ├─ PostgreSQL         ├─ MuseTalk
 ├─ Redis              ├─ Stable Diffusion XL
-├─ MinIO              └─ Silero TTS
+├─ S3/MinIO           └─ Silero TTS
 └─ Worker             
 ```
 
@@ -56,19 +56,22 @@ npx prisma migrate dev
 cp .env.example .env
 ```
 
-Отредактируйте `.env`:
+Отредактируйте `.env`. Используйте S3_* переменные (поддерживаются также MINIO_* для обратной совместимости, S3_* имеет приоритет):
+
 ```env
 # База данных (уже запущена в Docker)
 DATABASE_URL="postgresql://avatar:avatar_password@localhost:5432/avatar_factory"
 
 # Redis (уже запущен в Docker)
-REDIS_URL="redis://localhost:6379"
+REDIS_HOST=localhost
+REDIS_PORT=6379
 
-# MinIO (уже запущен в Docker)
-MINIO_ENDPOINT="localhost"
-MINIO_PORT="9000"
-MINIO_ACCESS_KEY="minioadmin"
-MINIO_SECRET_KEY="minioadmin123"
+# Storage (S3/MinIO — уже запущен в Docker)
+S3_ENDPOINT=localhost
+S3_PORT=9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin123
+S3_BUCKET=avatar-videos
 
 # GPU Server (укажите IP вашего стационарного ПК)
 GPU_SERVER_URL="http://192.168.1.100:8001"
@@ -150,7 +153,7 @@ docker-compose logs -f
 1. Откройте http://localhost:3000
 2. Загрузите фото вашего лица
 3. Введите текст для озвучки (например: "Привет! Это моё первое видео с аватаром!")
-4. Выберите стиль фона
+4. Выберите стиль фона: `simple`, `professional`, `creative` или `minimalist`
 5. Нажмите "Создать видео"
 6. Подождите 1-3 минуты ⏳
 7. Готово! 🎉
@@ -160,7 +163,7 @@ docker-compose logs -f
 ```
 1. Пользователь → Загружает фото + текст
                 ↓
-2. Next.js API → Сохраняет в MinIO, создает задачу в Redis
+2. Next.js API → Сохраняет в S3/MinIO, создает задачу в Redis
                 ↓
 3. Worker → Забирает задачу из очереди
                 ↓
@@ -171,7 +174,7 @@ docker-compose logs -f
                 ↓
 5. Worker → Композитинг через FFmpeg
                 ↓
-6. Worker → Загружает результат в MinIO
+6. Worker → Загружает результат в S3/MinIO
                 ↓
 7. Пользователь ← Получает готовое видео!
 ```
@@ -258,7 +261,7 @@ docker-compose restart redis
 redis-server
 ```
 
-### ❌ "MinIO not accessible"
+### ❌ "Storage (S3/MinIO) not accessible"
 
 ```bash
 # Откройте MinIO Console
@@ -314,25 +317,32 @@ docker build -t avatar-factory .
 
 ### 3. Добавьте больше голосов
 
-Отредактируйте `workers/video-worker.ts`:
+Отредактируйте `lib/config.ts` — `VOICE_CONFIG.SPEAKER_MAP`:
 ```typescript
-const speakers = {
+SPEAKER_MAP: {
   'ru_speaker_female': 'xenia',
   'ru_speaker_male': 'eugene',
-  'ru_speaker_female_2': 'kseniya',
-  'ru_speaker_male_2': 'baya',
-};
+  'en_speaker_female': 'en_female',
+  'en_speaker_male': 'en_male',
+  // Добавьте свои голоса Silero
+},
 ```
 
 ### 4. Добавьте свои стили фонов
 
-В `workers/video-worker.ts`:
+В `lib/config.ts` — `BACKGROUND_STYLE_MAP` и `BACKGROUND_PROMPTS`:
 ```typescript
-const prompts = {
-  'cyberpunk': 'cyberpunk city, neon lights, futuristic, 4k',
-  'fantasy': 'fantasy forest, magical, ethereal light, 4k',
+BACKGROUND_STYLE_MAP: {
+  simple: 'modern-office',
+  professional: 'corporate-meeting',
+  creative: 'artistic-studio',
+  minimalist: 'clean-workspace',
+  cyberpunk: 'cyberpunk-style',  // добавьте новый стиль
+},
+BACKGROUND_PROMPTS: {
   // ...
-};
+  'cyberpunk-style': 'cyberpunk city, neon lights, futuristic, 4k',
+},
 ```
 
 ## Полезные команды
@@ -366,7 +376,7 @@ npm run dev     # Ctrl+C
 
 ## Поддержка
 
-- 📖 [Полная документация](./README.md)
+- 📖 [API Reference](./API.md) | [Полная документация](../README.md)
 - 🐛 [GitHub Issues](https://github.com/Ne4to777/avatar-factory/issues)
 - 💬 [Telegram](https://t.me/yourusername)
 - 📧 Email: your@email.com
