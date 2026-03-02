@@ -1,0 +1,140 @@
+{
+  "current_stack": {
+    "torch": "2.1.0",
+    "transformers": "4.36.2",
+    "diffusers": "0.25.1",
+    "numpy": "1.26.4",
+    "opencv-python": "4.9.0",
+    "accelerate": "0.25.0"
+  },
+  "new_models": {
+    "Whisper Large V3": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.35.0",
+          "reason": "не установлен"
+        },
+        {
+          "package": "numpy",
+          "current": "2.4.2",
+          "required": ">=1.20.0,<2.0.0",
+          "reason": "2.4.2 >= 2.0.0"
+        }
+      ]
+    },
+    "Llama 3.3 8B": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.43.0",
+          "reason": "не установлен"
+        },
+        {
+          "package": "accelerate",
+          "current": null,
+          "required": ">=0.26.0",
+          "reason": "не установлен"
+        }
+      ]
+    },
+    "Llama 3.3 70B": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.43.0",
+          "reason": "не установлен"
+        },
+        {
+          "package": "accelerate",
+          "current": null,
+          "required": ">=0.26.0",
+          "reason": "не установлен"
+        }
+      ]
+    },
+    "AnimateDiff": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "diffusers",
+          "current": null,
+          "required": ">=0.27.0",
+          "reason": "не установлен"
+        },
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.40.0",
+          "reason": "не установлен"
+        }
+      ]
+    },
+    "Stable Video Diffusion": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "diffusers",
+          "current": null,
+          "required": ">=0.25.0",
+          "reason": "не установлен"
+        },
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.35.0",
+          "reason": "не установлен"
+        }
+      ]
+    }
+  },
+  "safe_alternatives": {
+    "Llama 2 7B": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.30.0",
+          "reason": "не установлен"
+        }
+      ]
+    },
+    "Mistral 7B v0.1": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.34.0",
+          "reason": "не установлен"
+        }
+      ]
+    },
+    "Phi-2": {
+      "compatible": false,
+      "conflicts": [
+        {
+          "package": "transformers",
+          "current": null,
+          "required": ">=4.37.0",
+          "reason": "не установлен"
+        }
+      ]
+    }
+  },
+  "safe_to_install": [],
+  "requires_upgrade": [
+    "Whisper Large V3",
+    "Llama 3.3 8B",
+    "Llama 3.3 70B",
+    "AnimateDiff",
+    "Stable Video Diffusion"
+  ]
+}
