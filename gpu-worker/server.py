@@ -621,6 +621,7 @@ async def generate_background(
         logger.info(f"Background generation: prompt='{prompt[:50]}...', size={width}x{height}")
         
         # Генерация изображения
+        logger.debug("Starting SDXL inference...")
         image = sd_pipeline(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -629,12 +630,25 @@ async def generate_background(
             num_inference_steps=30,
             guidance_scale=7.5
         ).images[0]
+        logger.debug("SDXL inference complete")
+        
+        # Очистка GPU памяти
+        torch.cuda.empty_cache()
+        logger.debug("GPU cache cleared")
         
         # Сохранение
         output_path = TEMP_DIR / f"bg_{os.urandom(8).hex()}.png"
-        image.save(output_path)
+        logger.debug(f"Saving image to: {output_path.name}")
         
-        logger.info(f"[OK] Background generated: {output_path.name}")
+        import time
+        save_start = time.time()
+        image.save(output_path)
+        save_time = time.time() - save_start
+        
+        file_size_mb = output_path.stat().st_size / 1e6
+        logger.info(f"✅ Background generated: {output_path.name} ({file_size_mb:.2f}MB, save_time={save_time:.1f}s)")
+        
+        logger.debug(f"Preparing FileResponse for {output_path.name}")
 
         def cleanup_png():
             try:
@@ -645,7 +659,13 @@ async def generate_background(
                 logger.warning(f"Failed to cleanup background temp {output_path}: {e}")
 
         background_tasks.add_task(cleanup_png)
-        return FileResponse(output_path, media_type="image/png")
+        
+        logger.debug(f"Sending FileResponse: {output_path.name}")
+        return FileResponse(
+            output_path, 
+            media_type="image/png",
+            headers={"Content-Disposition": f"attachment; filename=background_{os.urandom(4).hex()}.png"}
+        )
         
     except Exception as e:
         if output_path and output_path.exists():
