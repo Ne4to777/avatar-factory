@@ -6,6 +6,7 @@
 import { Worker, Job } from 'bullmq';
 import { promises as fs } from 'fs';
 import path from 'path';
+import axios from 'axios';
 import Redis from 'ioredis';
 import { prisma } from '../lib/prisma';
 import { gpuClient } from '../lib/gpu-client';
@@ -262,30 +263,13 @@ async function updateVideoStatus(
 }
 
 async function downloadFile(url: string): Promise<string> {
-  // Если это локальный MinIO URL, просто читаем файл
-  if (url.includes('localhost') || url.includes('minio')) {
-    // Извлекаем путь из URL
-    const urlObj = new URL(url);
-    const key = urlObj.pathname.split('/').slice(2).join('/');
-    
-    // Для локального MinIO можем скачать напрямую
-    const axios = require('axios');
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    
-    const ext = path.extname(url);
-    const tempPath = path.join(TEMP_DIR, `download_${Date.now()}${ext}`);
-    await fs.writeFile(tempPath, response.data);
-    
-    return tempPath;
-  }
-  
-  // Для внешних URL скачиваем через HTTP
-  const axios = require('axios');
-  const response = await axios.get(url, { responseType: 'arraybuffer' });
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+  });
   
   const ext = path.extname(url) || '.jpg';
   const tempPath = path.join(TEMP_DIR, `download_${Date.now()}${ext}`);
-  await fs.writeFile(tempPath, response.data);
+  await fs.writeFile(tempPath, Buffer.from(response.data));
   
   return tempPath;
 }

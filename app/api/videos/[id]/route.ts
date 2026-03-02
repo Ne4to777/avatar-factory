@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getJobStatus } from '@/lib/queue';
+import { deleteByUrl } from '@/lib/storage';
 
 export async function GET(
   req: NextRequest,
@@ -99,12 +100,10 @@ export async function DELETE(
     
     // Удаляем файлы из хранилища
     if (video.videoUrl) {
-      const { deleteByUrl } = await import('@/lib/storage');
       await deleteByUrl(video.videoUrl);
     }
     
     if (video.thumbnailUrl) {
-      const { deleteByUrl } = await import('@/lib/storage');
       await deleteByUrl(video.thumbnailUrl);
     }
     
