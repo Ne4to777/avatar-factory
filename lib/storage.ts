@@ -8,20 +8,30 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
-import { ENV, STORAGE_CONFIG, STORAGE_PATHS } from './config';
+import { STORAGE_CONFIG, STORAGE_PATHS } from './config';
 import { logger } from './logger';
 import { StorageError, ValidationError, type StorageUploadResult } from './types';
 
-// S3 Client configuration
-const s3Client = new S3Client({
-  endpoint: STORAGE_CONFIG.endpoint,
-  region: STORAGE_CONFIG.region || 'us-east-1',
-  credentials: {
-    accessKeyId: STORAGE_CONFIG.accessKeyId,
-    secretAccessKey: STORAGE_CONFIG.secretAccessKey,
-  },
-  forcePathStyle: true, // Важно для MinIO
-});
+export function createS3Client() {
+  return new S3Client({
+    endpoint: STORAGE_CONFIG.useSSL
+      ? `https://${STORAGE_CONFIG.endpoint}:${STORAGE_CONFIG.port}`
+      : `http://${STORAGE_CONFIG.endpoint}:${STORAGE_CONFIG.port}`,
+    region: STORAGE_CONFIG.region,
+    credentials: {
+      accessKeyId: STORAGE_CONFIG.accessKey,
+      secretAccessKey: STORAGE_CONFIG.secretKey,
+    },
+    forcePathStyle: true,
+  });
+}
+
+const s3Client = createS3Client();
+
+function getStoragePublicBaseUrl(): string {
+  const proto = STORAGE_CONFIG.useSSL ? 'https' : 'http';
+  return `${proto}://${STORAGE_CONFIG.endpoint}:${STORAGE_CONFIG.port}`;
+}
 
 export type StorageFolder = 'videos' | 'thumbnails' | 'backgrounds' | 'avatars' | 'temp';
 
@@ -95,7 +105,7 @@ export async function uploadBuffer(
     });
 
     const command = new PutObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: key,
       Body: buffer,
       ContentType: contentType,
@@ -103,14 +113,14 @@ export async function uploadBuffer(
     
     await s3Client.send(command);
     
-    const publicUrl = `${ENV.S3_ENDPOINT}/${STORAGE_CONFIG.bucketName}/${key}`;
+    const publicUrl = `${getStoragePublicBaseUrl()}/${STORAGE_CONFIG.bucket}/${key}`;
     
     logger.info('File uploaded', { key, size: buffer.length });
     
     return {
       url: publicUrl,
       key,
-      bucket: STORAGE_CONFIG.bucketName,
+      bucket: STORAGE_CONFIG.bucket,
       publicUrl,
     };
   } catch (error: any) {
@@ -163,7 +173,7 @@ export async function getSignedDownloadUrl(
 
   try {
     const command = new GetObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: key,
     });
     
@@ -190,7 +200,7 @@ export async function deleteFile(key: string): Promise<void> {
 
   try {
     const command = new DeleteObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: key,
     });
     
@@ -268,7 +278,7 @@ export async function fileExists(key: string): Promise<boolean> {
 
   try {
     const command = new GetObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: key,
     });
     
@@ -289,7 +299,7 @@ export async function getFileSize(key: string): Promise<number> {
 
   try {
     const command = new GetObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: key,
     });
     
@@ -317,7 +327,7 @@ export async function copyFile(sourceKey: string, destKey: string): Promise<void
     logger.storageOperation('copy', { sourceKey, destKey });
 
     const getCommand = new GetObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: sourceKey,
     });
     
@@ -332,7 +342,7 @@ export async function copyFile(sourceKey: string, destKey: string): Promise<void
     }
     
     const putCommand = new PutObjectCommand({
-      Bucket: STORAGE_CONFIG.bucketName,
+      Bucket: STORAGE_CONFIG.bucket,
       Key: destKey,
       Body: Buffer.from(body),
       ContentType: response.ContentType,

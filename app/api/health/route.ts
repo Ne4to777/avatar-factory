@@ -4,15 +4,29 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { ListBucketsCommand } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
 import { getGPUMetrics } from '@/lib/gpu-client';
 import { getQueueMetrics } from '@/lib/queue';
+import { createS3Client } from '@/lib/storage';
+import { logger } from '@/lib/logger';
 import Redis from 'ioredis';
 
 const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
 });
+
+async function checkStorage(): Promise<boolean> {
+  try {
+    const s3 = createS3Client();
+    const result = await s3.send(new ListBucketsCommand({}));
+    return result.Buckets !== undefined;
+  } catch (error) {
+    logger.error('Storage health check failed', { error });
+    return false;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -57,24 +71,8 @@ export async function GET(req: NextRequest) {
       metrics.gpu = { available: false, error: 'Unable to reach GPU server' };
     }
     
-    // 4. Проверка хранилища (MinIO)
-    try {
-      const { S3Client, ListBucketsCommand } = await import('@aws-sdk/client-s3');
-      const s3Client = new S3Client({
-        endpoint: `http://${process.env.MINIO_ENDPOINT || 'localhost'}:${process.env.MINIO_PORT || '9000'}`,
-        region: 'us-east-1',
-        credentials: {
-          accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-          secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin123',
-        },
-        forcePathStyle: true,
-      });
-      
-      await s3Client.send(new ListBucketsCommand({}));
-      checks.storage = true;
-    } catch (error) {
-      console.error('Storage check failed:', error);
-    }
+    // 4. Проверка хранилища (MinIO/S3)
+    checks.storage = await checkStorage();
     
     // Подсчет общей статистики
     const stats = await prisma.video.groupBy({

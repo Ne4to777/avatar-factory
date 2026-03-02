@@ -3,7 +3,7 @@
  * Testing configuration and validation helpers
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   VIDEO_DIMENSIONS,
   VIDEO_CONFIG,
@@ -169,5 +169,29 @@ describe('Validation Helpers', () => {
       expect(() => validateUrl('ftp://example.com')).not.toThrow();
       expect(() => validateUrl('file:///path/to/file')).not.toThrow();
     });
+  });
+});
+
+describe('Storage Configuration', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('should prefer S3_* env vars over MINIO_*', async () => {
+    vi.stubEnv('S3_ENDPOINT', 's3.amazonaws.com');
+    vi.stubEnv('MINIO_ENDPOINT', 'localhost');
+
+    const { STORAGE_CONFIG } = await import('@/lib/config');
+
+    expect(STORAGE_CONFIG.endpoint).toBe('s3.amazonaws.com');
+  });
+
+  it('should fallback to MINIO_* if S3_* not set', async () => {
+    vi.stubEnv('S3_ENDPOINT', '');
+    vi.stubEnv('MINIO_ENDPOINT', 'localhost');
+
+    const { STORAGE_CONFIG } = await import('@/lib/config');
+
+    expect(STORAGE_CONFIG.endpoint).toBe('localhost');
   });
 });

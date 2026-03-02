@@ -102,10 +102,12 @@ export interface StorageUploadResult {
 
 export interface StorageConfig {
   endpoint: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  bucketName: string;
-  region?: string;
+  port: number;
+  accessKey: string;
+  secretKey: string;
+  bucket: string;
+  useSSL: boolean;
+  region: string;
 }
 
 // ==========================================

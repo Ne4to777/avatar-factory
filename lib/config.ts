@@ -67,12 +67,7 @@ export const ENV = {
   GPU_API_KEY: getEnvVar('GPU_API_KEY', 'development-key'),
   GPU_TIMEOUT_MS: getEnvNumber('GPU_TIMEOUT_MS', 300000), // 5 minutes
   
-  // Storage (MinIO/S3)
-  S3_ENDPOINT: getEnvVar('S3_ENDPOINT', 'http://localhost:9000'),
-  S3_ACCESS_KEY: getEnvVar('S3_ACCESS_KEY', 'minioadmin'),
-  S3_SECRET_KEY: getEnvVar('S3_SECRET_KEY', 'minioadmin'),
-  S3_BUCKET: getEnvVar('S3_BUCKET', 'avatar-videos'),
-  S3_REGION: getEnvVar('S3_REGION', 'us-east-1'),
+  // Storage (MinIO/S3) - see STORAGE_CONFIG for unified S3_*/MINIO_* support
   
   // Temp files
   TEMP_DIR: getEnvVar('TEMP_DIR', '/tmp/avatar-factory'),
@@ -82,16 +77,18 @@ export const ENV = {
 } as const;
 
 // ==========================================
-// Storage Configuration
+// Storage Configuration (supports both S3_* and MINIO_* env vars, S3_* takes precedence)
 // ==========================================
 
-export const STORAGE_CONFIG: StorageConfig = {
-  endpoint: ENV.S3_ENDPOINT,
-  accessKeyId: ENV.S3_ACCESS_KEY,
-  secretAccessKey: ENV.S3_SECRET_KEY,
-  bucketName: ENV.S3_BUCKET,
-  region: ENV.S3_REGION,
-};
+export const STORAGE_CONFIG = {
+  endpoint: getEnvVar('S3_ENDPOINT', getEnvVar('MINIO_ENDPOINT', 'localhost')),
+  port: getEnvNumber('S3_PORT', getEnvNumber('MINIO_PORT', 9000)),
+  accessKey: getEnvVar('S3_ACCESS_KEY', getEnvVar('MINIO_ACCESS_KEY', 'minioadmin')),
+  secretKey: getEnvVar('S3_SECRET_KEY', getEnvVar('MINIO_SECRET_KEY', 'minioadmin123')),
+  bucket: getEnvVar('S3_BUCKET', getEnvVar('MINIO_BUCKET', 'avatar-videos')),
+  useSSL: getEnvVar('S3_USE_SSL', getEnvVar('MINIO_USE_SSL', 'false')) === 'true',
+  region: getEnvVar('S3_REGION', 'us-east-1'),
+} as const satisfies StorageConfig;
 
 export const STORAGE_PATHS = {
   VIDEOS: 'videos',
