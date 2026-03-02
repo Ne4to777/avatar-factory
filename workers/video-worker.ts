@@ -13,6 +13,8 @@ import { gpuClient } from '../lib/gpu-client';
 import {
   BACKGROUND_STYLE_MAP,
   BACKGROUND_PROMPTS,
+  getSpeakerFromVoiceId,
+  getBackgroundDimensions,
 } from '../lib/config';
 import { composeVideo, generateThumbnail, getVideoInfo, ensureTempDir } from '../lib/video';
 import { uploadVideo, uploadThumbnail, deleteFile } from '../lib/storage';
@@ -272,26 +274,6 @@ async function downloadFile(url: string): Promise<string> {
   await fs.writeFile(tempPath, Buffer.from(response.data));
   
   return tempPath;
-}
-
-function getSpeakerFromVoiceId(voiceId: string): string {
-  const speakers: Record<string, string> = {
-    'ru_speaker_female': 'xenia',
-    'ru_speaker_male': 'eugene',
-    'ru_speaker_female_2': 'kseniya',
-  };
-  
-  return speakers[voiceId] || 'xenia';
-}
-
-function getBackgroundDimensions(format: 'VERTICAL' | 'HORIZONTAL' | 'SQUARE') {
-  const dimensions = {
-    VERTICAL: { width: 1080, height: 1920 },
-    HORIZONTAL: { width: 1920, height: 1080 },
-    SQUARE: { width: 1080, height: 1080 },
-  };
-  
-  return dimensions[format];
 }
 
 function getBackgroundPrompt(styleAPI: string): string {

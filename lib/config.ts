@@ -3,7 +3,7 @@
  * Централизованная конфигурация с валидацией
  */
 
-import { ValidationError, type VideoDimensions, type StorageConfig } from './types';
+import { ValidationError, type VideoDimensions, type StorageConfig, type VideoFormat } from './types';
 
 // ==========================================
 // Video Configuration
@@ -175,4 +175,16 @@ export function validateUrl(url: string): void {
   } catch {
     throw new ValidationError(`Invalid URL: ${url}`);
   }
+}
+
+// ==========================================
+// Worker Helpers
+// ==========================================
+
+export function getSpeakerFromVoiceId(voiceId: string): string {
+  return VOICE_CONFIG.SPEAKER_MAP[voiceId as keyof typeof VOICE_CONFIG.SPEAKER_MAP] || VOICE_CONFIG.DEFAULT_SPEAKER;
+}
+
+export function getBackgroundDimensions(format: VideoFormat): { width: number; height: number } {
+  return VIDEO_DIMENSIONS[format] || VIDEO_DIMENSIONS.VERTICAL;
 }

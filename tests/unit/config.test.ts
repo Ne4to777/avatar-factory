@@ -14,6 +14,8 @@ import {
   validateVideoFormat,
   validateTextLength,
   validateUrl,
+  getSpeakerFromVoiceId,
+  getBackgroundDimensions,
 } from '@/lib/config';
 import { ValidationError } from '@/lib/types';
 
@@ -168,6 +170,31 @@ describe('Validation Helpers', () => {
     it('should handle edge cases', () => {
       expect(() => validateUrl('ftp://example.com')).not.toThrow();
       expect(() => validateUrl('file:///path/to/file')).not.toThrow();
+    });
+  });
+});
+
+describe('Helper Functions', () => {
+  describe('getSpeakerFromVoiceId', () => {
+    it('should return correct speaker for valid voice ID', () => {
+      expect(getSpeakerFromVoiceId('ru_speaker_male')).toBe('eugene');
+      expect(getSpeakerFromVoiceId('ru_speaker_female')).toBe('xenia');
+    });
+
+    it('should return default speaker for unknown voice ID', () => {
+      expect(getSpeakerFromVoiceId('unknown')).toBe(VOICE_CONFIG.DEFAULT_SPEAKER);
+    });
+  });
+
+  describe('getBackgroundDimensions', () => {
+    it('should return correct dimensions for format', () => {
+      expect(getBackgroundDimensions('VERTICAL')).toEqual({ width: 1080, height: 1920 });
+      expect(getBackgroundDimensions('HORIZONTAL')).toEqual({ width: 1920, height: 1080 });
+      expect(getBackgroundDimensions('SQUARE')).toEqual({ width: 1080, height: 1080 });
+    });
+
+    it('should return vertical dimensions for unknown format', () => {
+      expect(getBackgroundDimensions('unknown' as any)).toEqual({ width: 1080, height: 1920 });
     });
   });
 });
