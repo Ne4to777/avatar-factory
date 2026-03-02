@@ -57,6 +57,58 @@ curl http://localhost:8001/health
 
 ---
 
+### 🛠️ Make — Автоматическая установка (РЕКОМЕНДУЕТСЯ)
+
+**Самый простой способ** установки всех зависимостей в правильном порядке.
+
+**Требования:**
+- Python 3.10 или 3.11
+- CUDA 11.8
+- GNU Make (Git Bash, WSL, или `choco install make`)
+
+**Установка и запуск:**
+
+```bash
+# В Git Bash или WSL:
+cd avatar-factory/gpu-worker
+
+# Полная установка (автоматически установит PyTorch, mmcv, все зависимости)
+make install
+
+# Запустить сервер
+make run
+
+# Проверить статус установки
+make status
+
+# Проверить здоровье сервера
+make health
+```
+
+**Все команды:**
+
+```bash
+make help            # Показать все команды
+make install         # Полная установка
+make run             # Запустить сервер
+make status          # Проверить установку
+make check-python    # Проверить Python
+make check-cuda      # Проверить CUDA
+make test            # Запустить тесты
+make clean           # Очистить temp файлы
+make clean-venv      # Удалить venv
+make reinstall       # Переустановить с нуля
+```
+
+**Почему Make:**
+- ✅ Автоматически устанавливает зависимости в правильном порядке
+- ✅ Решает проблему с `mmcv` (использует `mim`)
+- ✅ Проверяет версии Python и CUDA
+- ✅ Простые команды для запуска и тестирования
+- ✅ Работает в Git Bash, WSL, и с GNU Make на Windows
+
+---
+
 ### 🪟 Windows — Native установка (БЕЗ MuseTalk)
 
 **Ограничение:** Lip-sync (MuseTalk) не работает на Windows без Docker.

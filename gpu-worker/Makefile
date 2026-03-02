@@ -1,203 +1,208 @@
-# Avatar Factory GPU Worker - Makefile
+# ================================================================
+# Avatar Factory GPU Worker - Makefile for Windows
+# ================================================================
+# 
+# Prerequisites:
+# - Python 3.10 or 3.11
+# - CUDA 11.8 installed
+# - NVIDIA GPU
+# - GNU Make (Git Bash, WSL, or chocolatey install make)
+#
+# Usage:
+#   make install      # Full installation
+#   make run          # Start server
+#   make test         # Run tests
+#   make clean        # Clean temp files
+#   make help         # Show all commands
+# ================================================================
 
-.PHONY: help install start test clean health
+# Detect OS
+ifeq ($(OS),Windows_NT)
+    PYTHON := python
+    VENV_BIN := venv/Scripts
+    ACTIVATE := $(VENV_BIN)/activate
+    RM := cmd /c rmdir /s /q
+    MKDIR := cmd /c mkdir
+else
+    PYTHON := python3
+    VENV_BIN := venv/bin
+    ACTIVATE := $(VENV_BIN)/activate
+    RM := rm -rf
+    MKDIR := mkdir -p
+endif
 
-# Colors
-RED := \033[0;31m
-GREEN := \033[0;32m
-YELLOW := \033[1;33m
+# Colors for output (works in Git Bash on Windows)
 BLUE := \033[0;34m
-NC := \033[0m
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m # No Color
 
-PYTHON := python3
-VENV := venv
-VENV_BIN := $(VENV)/bin
-PIP := $(VENV_BIN)/pip
-PYTHON_VENV := $(VENV_BIN)/python
+.PHONY: help install install-deps install-pytorch install-mmcv run test clean check-python check-cuda status venv
 
+# Default target
 help:
-	@echo "$(BLUE)Avatar Factory GPU Worker - Available Commands$(NC)"
+	@echo "$(BLUE)Avatar Factory GPU Worker - Make Commands$(NC)"
 	@echo ""
-	@echo "$(GREEN)Setup:$(NC)"
-	@echo "  make install          - Full installation"
-	@echo "  make install-deps     - Install Python dependencies"
-	@echo "  make install-models   - Download AI models"
-	@echo "  make setup-musetalk   - Setup MuseTalk"
+	@echo "Setup:"
+	@echo "  make install          Full installation (recommended)"
+	@echo "  make venv             Create virtual environment only"
+	@echo "  make install-deps     Install all dependencies"
 	@echo ""
-	@echo "$(GREEN)Run:$(NC)"
-	@echo "  make start            - Start GPU server"
-	@echo "  make dev              - Start in debug mode"
+	@echo "Run:"
+	@echo "  make run              Start GPU worker server"
+	@echo "  make status           Check installation status"
 	@echo ""
-	@echo "$(GREEN)Test:$(NC)"
-	@echo "  make test             - Run all tests"
-	@echo "  make test-health      - Test server health"
-	@echo "  make test-gpu         - Test GPU availability"
+	@echo "Testing:"
+	@echo "  make test             Run tests"
+	@echo "  make check-python     Check Python version"
+	@echo "  make check-cuda       Check CUDA availability"
 	@echo ""
-	@echo "$(GREEN)Maintenance:$(NC)"
-	@echo "  make clean            - Clean temporary files"
-	@echo "  make clean-all        - Deep clean (removes venv)"
-	@echo "  make health           - Check server health"
-	@echo "  make gpu-info         - Show GPU information"
+	@echo "Maintenance:"
+	@echo "  make clean            Remove temp files"
+	@echo "  make clean-venv       Remove virtual environment"
+	@echo "  make reinstall        Clean install from scratch"
+	@echo ""
 
-# 🎯 Полная установка
-install: check-deps setup-venv install-pytorch install-deps setup-musetalk create-env
-	@echo -e "$(GREEN)✓ Installation complete!$(NC)"
+# Full installation
+install: check-python venv install-deps
+	@echo "$(GREEN)[OK] Installation complete!$(NC)"
 	@echo ""
-	@echo -e "$(BLUE)Next steps:$(NC)"
-	@echo "  1. Download models: make install-models"
-	@echo "  2. Start server: make start"
-	@echo "  3. Test: make test"
+	@echo "Next steps:"
+	@echo "  1. Set up .env file (copy from .env.example)"
+	@echo "  2. Run: make run"
+	@echo ""
 
-# 🔍 Проверка зависимостей
-check-deps:
-	@echo -e "$(BLUE)Checking dependencies...$(NC)"
-	@command -v $(PYTHON) >/dev/null 2>&1 && echo -e "$(GREEN)✓ Python$(NC)" || (echo -e "$(RED)✗ Python not found$(NC)" && exit 1)
-	@command -v pip3 >/dev/null 2>&1 && echo -e "$(GREEN)✓ pip$(NC)" || (echo -e "$(RED)✗ pip not found$(NC)" && exit 1)
-	@command -v git >/dev/null 2>&1 && echo -e "$(GREEN)✓ git$(NC)" || (echo -e "$(RED)✗ git not found$(NC)" && exit 1)
-	@command -v nvidia-smi >/dev/null 2>&1 && echo -e "$(GREEN)✓ CUDA$(NC)" || echo -e "$(YELLOW)⚠ nvidia-smi not found$(NC)"
-
-# 🐍 Создание virtual environment
-setup-venv:
-	@echo -e "$(BLUE)Setting up Python virtual environment...$(NC)"
-	@if [ ! -d "$(VENV)" ]; then \
-		$(PYTHON) -m venv $(VENV); \
-		echo -e "$(GREEN)✓ Virtual environment created$(NC)"; \
+# Create virtual environment
+venv:
+	@echo "$(BLUE)[1/4] Creating virtual environment...$(NC)"
+	@if [ -d "venv" ]; then \
+		echo "$(YELLOW)[WARNING] venv already exists$(NC)"; \
 	else \
-		echo -e "$(GREEN)✓ Virtual environment exists$(NC)"; \
-	fi
-	@$(PIP) install --upgrade pip setuptools wheel
-
-# 🔥 Установка PyTorch с CUDA
-install-pytorch:
-	@echo -e "$(BLUE)Installing PyTorch with CUDA...$(NC)"
-	@$(PIP) install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-	@echo -e "$(GREEN)✓ PyTorch installed$(NC)"
-
-# 📦 Установка Python зависимостей
-install-deps:
-	@echo -e "$(BLUE)Installing Python dependencies...$(NC)"
-	@$(PIP) install -r requirements.txt
-	@echo -e "$(GREEN)✓ Dependencies installed$(NC)"
-
-# 🎭 Настройка MuseTalk
-setup-musetalk:
-	@echo -e "$(BLUE)Setting up MuseTalk...$(NC)"
-	@echo -e "$(YELLOW)MuseTalk requires separate installation:$(NC)"
-	@echo ""
-	@echo "  For Windows:"
-	@echo "  powershell -ExecutionPolicy Bypass -File install-musetalk.ps1"
-	@echo ""
-	@echo "  For Linux/macOS:"
-	@echo "  bash install-musetalk.sh  (to be created)"
-	@echo ""
-
-# 📥 Скачивание AI моделей
-install-models:
-	@echo -e "$(BLUE)Downloading AI models (~10GB, 15-30 minutes)...$(NC)"
-	@$(PYTHON_VENV) download_models.py
-	@echo -e "$(GREEN)✓ Models downloaded$(NC)"
-
-# 🔐 Создание .env файла
-create-env:
-	@echo -e "$(BLUE)Creating .env file...$(NC)"
-	@if [ ! -f ".env" ]; then \
-		echo "GPU_API_KEY=$$(openssl rand -base64 32)" > .env; \
-		echo "HOST=0.0.0.0" >> .env; \
-		echo "PORT=8001" >> .env; \
-		echo -e "$(GREEN)✓ .env created$(NC)"; \
-		echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"; \
-		echo -e "$(YELLOW)API Key:$(NC) $$(grep GPU_API_KEY .env | cut -d'=' -f2)"; \
-		echo -e "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"; \
-	else \
-		echo -e "$(GREEN)✓ .env exists$(NC)"; \
+		$(PYTHON) -m venv venv; \
+		echo "$(GREEN)[OK] Virtual environment created$(NC)"; \
 	fi
 
-# 🚀 Запуск сервера
-start:
-	@echo -e "$(BLUE)Starting GPU server...$(NC)"
-	@. $(VENV_BIN)/activate && $(PYTHON_VENV) server.py
+# Install all dependencies in correct order
+install-deps: venv
+	@echo "$(BLUE)[2/4] Upgrading pip, setuptools, wheel...$(NC)"
+	@bash -c "source $(ACTIVATE) && python -m pip install --upgrade pip setuptools wheel"
+	@echo "$(GREEN)[OK] Base tools upgraded$(NC)"
+	@echo ""
+	@echo "$(BLUE)[3/4] Installing PyTorch 2.1.0 + CUDA 11.8...$(NC)"
+	@echo "$(YELLOW)This may take several minutes...$(NC)"
+	@bash -c "source $(ACTIVATE) && pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118"
+	@echo "$(GREEN)[OK] PyTorch installed$(NC)"
+	@echo ""
+	@echo "$(BLUE)[4/4] Installing OpenMMLab packages...$(NC)"
+	@bash -c "source $(ACTIVATE) && pip install -U openmim"
+	@bash -c "source $(ACTIVATE) && mim install mmcv==2.1.0"
+	@bash -c "source $(ACTIVATE) && pip install 'mmdet>=3.3.0' 'mmpose>=1.3.0'"
+	@echo "$(GREEN)[OK] OpenMMLab packages installed$(NC)"
+	@echo ""
+	@echo "$(BLUE)Installing remaining dependencies...$(NC)"
+	@bash -c "source $(ACTIVATE) && pip install -r requirements.txt"
+	@echo "$(GREEN)[OK] All dependencies installed$(NC)"
 
-# 🐛 Запуск в debug режиме
-dev:
-	@echo -e "$(BLUE)Starting GPU server (debug mode)...$(NC)"
-	@. $(VENV_BIN)/activate && DEBUG=1 $(PYTHON_VENV) server.py
+# Alternative: Install PyTorch only
+install-pytorch: venv
+	@echo "$(BLUE)Installing PyTorch 2.1.0 + CUDA 11.8...$(NC)"
+	@bash -c "source $(ACTIVATE) && pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118"
+	@echo "$(GREEN)[OK] PyTorch installed$(NC)"
 
-# 🧪 Все тесты
-test: test-gpu test-health
+# Alternative: Install mmcv only
+install-mmcv: venv
+	@echo "$(BLUE)Installing mmcv via mim...$(NC)"
+	@bash -c "source $(ACTIVATE) && pip install -U openmim"
+	@bash -c "source $(ACTIVATE) && mim install mmcv==2.1.0"
+	@bash -c "source $(ACTIVATE) && pip install 'mmdet>=3.3.0' 'mmpose>=1.3.0'"
+	@echo "$(GREEN)[OK] mmcv installed$(NC)"
 
-# 🧪 Тест GPU
-test-gpu:
-	@echo -e "$(BLUE)Testing GPU...$(NC)"
-	@. $(VENV_BIN)/activate && $(PYTHON_VENV) -c "import torch; print('CUDA available:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+# Run server
+run:
+	@echo "$(BLUE)Starting GPU Worker...$(NC)"
+	@bash -c "source $(ACTIVATE) && python server.py"
 
-# 🧪 Тест сервера
-test-health:
-	@echo -e "$(BLUE)Testing server health...$(NC)"
-	@curl -s http://localhost:8001/health || echo "Server not running"
+# Run in background (requires nohup)
+run-background:
+	@echo "$(BLUE)Starting GPU Worker in background...$(NC)"
+	@bash -c "source $(ACTIVATE) && nohup python server.py > server.log 2>&1 &"
+	@echo "$(GREEN)[OK] Server started in background$(NC)"
+	@echo "Check logs: tail -f server.log"
 
-# 🧪 Полный тест
-test-full:
-	@echo -e "$(BLUE)Running full test suite...$(NC)"
-	@. $(VENV_BIN)/activate && $(PYTHON_VENV) test_server.py
+# Check installation status
+status:
+	@echo "$(BLUE)=== Installation Status ===$(NC)"
+	@echo ""
+	@echo "Python:"
+	@$(PYTHON) --version
+	@echo ""
+	@echo "Virtual Environment:"
+	@if [ -d "venv" ]; then \
+		echo "$(GREEN)[OK] venv exists$(NC)"; \
+	else \
+		echo "$(RED)[ERROR] venv not found$(NC)"; \
+	fi
+	@echo ""
+	@echo "PyTorch:"
+	@bash -c "source $(ACTIVATE) && python -c 'import torch; print(f\"  Version: {torch.__version__}\"); print(f\"  CUDA Available: {torch.cuda.is_available()}\"); print(f\"  CUDA Version: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}\")' 2>/dev/null || echo '$(RED)[ERROR] PyTorch not installed$(NC)'"
+	@echo ""
+	@echo "OpenMMLab:"
+	@bash -c "source $(ACTIVATE) && python -c 'try:\n    import mmcv; print(f\"  mmcv: {mmcv.__version__}\")\nexcept: print(\"  mmcv: $(RED)NOT INSTALLED$(NC)\")'" 2>/dev/null
+	@bash -c "source $(ACTIVATE) && python -c 'try:\n    import mmdet; print(f\"  mmdet: {mmdet.__version__}\")\nexcept: print(\"  mmdet: $(RED)NOT INSTALLED$(NC)\")'" 2>/dev/null
+	@bash -c "source $(ACTIVATE) && python -c 'try:\n    import mmpose; print(f\"  mmpose: {mmpose.__version__}\")\nexcept: print(\"  mmpose: $(RED)NOT INSTALLED$(NC)\")'" 2>/dev/null
+	@echo ""
 
-# 🏥 Health check
-health:
-	@. $(VENV_BIN)/activate && $(PYTHON_VENV) -c "import requests; r = requests.get('http://localhost:8001/health'); print(r.json())" 2>/dev/null || echo "Server not running"
+# Check Python version
+check-python:
+	@echo "$(BLUE)Checking Python version...$(NC)"
+	@$(PYTHON) --version
+	@$(PYTHON) -c "import sys; exit(0 if sys.version_info >= (3, 10) and sys.version_info < (3, 12) else 1)" || \
+		(echo "$(RED)[ERROR] Python 3.10 or 3.11 required$(NC)" && exit 1)
+	@echo "$(GREEN)[OK] Python version compatible$(NC)"
 
-# 🖥️ GPU информация
-gpu-info:
-	@echo -e "$(BLUE)=== GPU Information ===$(NC)"
-	@nvidia-smi --query-gpu=name,memory.total,memory.free,temperature.gpu --format=csv,noheader 2>/dev/null || echo "nvidia-smi not available"
+# Check CUDA
+check-cuda:
+	@echo "$(BLUE)Checking CUDA...$(NC)"
+	@bash -c "source $(ACTIVATE) && python -c 'import torch; assert torch.cuda.is_available(), \"CUDA not available\"; print(f\"$(GREEN)[OK] CUDA {torch.version.cuda} available$(NC)\")'" || \
+		echo "$(RED)[ERROR] CUDA not available$(NC)"
 
-# 🧹 Очистка временных файлов
+# Run tests
+test:
+	@echo "$(BLUE)Running tests...$(NC)"
+	@bash -c "source $(ACTIVATE) && python -m pytest test_temp_file_cleanup.py -v" || echo "$(YELLOW)[WARNING] No tests found or pytest not installed$(NC)"
+
+# Clean temp files
 clean:
-	@echo -e "$(BLUE)Cleaning temporary files...$(NC)"
-	rm -rf /tmp/avatar-factory/*
-	rm -rf temp/*
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	@echo -e "$(GREEN)✓ Cleaned$(NC)"
+	@echo "$(BLUE)Cleaning temporary files...$(NC)"
+	@if [ -d "__pycache__" ]; then $(RM) __pycache__; fi
+	@if [ -d "*.pyc" ]; then find . -name "*.pyc" -delete 2>/dev/null || true; fi
+	@if [ -d ".pytest_cache" ]; then $(RM) .pytest_cache; fi
+	@echo "$(GREEN)[OK] Cleaned$(NC)"
 
-# 🗑️ Глубокая очистка
-clean-all:
-	@echo -e "$(YELLOW)⚠ This will remove venv and models!$(NC)"
-	@read -p "Continue? (y/n) " -n 1 -r && echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		$(MAKE) clean; \
-		rm -rf $(VENV); \
-		rm -rf checkpoints/; \
-		rm -rf models/; \
-		echo -e "$(GREEN)✓ Deep clean complete$(NC)"; \
+# Remove virtual environment
+clean-venv:
+	@echo "$(BLUE)Removing virtual environment...$(NC)"
+	@if [ -d "venv" ]; then \
+		$(RM) venv; \
+		echo "$(GREEN)[OK] venv removed$(NC)"; \
+	else \
+		echo "$(YELLOW)[WARNING] venv not found$(NC)"; \
 	fi
 
-# 🔄 Перезапуск
-restart:
-	@pkill -f "python server.py" || true
-	@sleep 2
-	@$(MAKE) start
+# Full reinstall
+reinstall: clean-venv install
+	@echo "$(GREEN)[OK] Reinstallation complete$(NC)"
 
-# 📊 Показать информацию
-info:
-	@echo -e "$(BLUE)=== GPU Worker Info ===$(NC)"
-	@echo "Python: $$($(PYTHON) --version 2>&1)"
-	@if [ -f "$(VENV_BIN)/python" ]; then \
-		echo "venv Python: $$($(PYTHON_VENV) --version 2>&1)"; \
-		echo "PyTorch: $$($(PYTHON_VENV) -c 'import torch; print(torch.__version__)' 2>/dev/null || echo 'Not installed')"; \
-		echo "CUDA: $$($(PYTHON_VENV) -c 'import torch; print(torch.version.cuda)' 2>/dev/null || echo 'N/A')"; \
+# Health check
+health:
+	@echo "$(BLUE)Checking GPU Worker health...$(NC)"
+	@curl -f http://localhost:8001/health || echo "$(RED)[ERROR] Server not running$(NC)"
+
+# Show server logs (if running in background)
+logs:
+	@if [ -f "server.log" ]; then \
+		tail -f server.log; \
+	else \
+		echo "$(RED)[ERROR] server.log not found. Is server running in background?$(NC)"; \
 	fi
-	@echo ""
-	@if command -v nvidia-smi >/dev/null 2>&1; then \
-		echo -e "$(BLUE)=== GPU Info ===$(NC)"; \
-		nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; \
-	fi
-
-# 📚 Requirements
-requirements:
-	@$(PIP) list
-
-# 🔄 Обновление зависимостей
-update:
-	@echo -e "$(BLUE)Updating dependencies...$(NC)"
-	@$(PIP) install --upgrade pip
-	@$(PIP) install --upgrade -r requirements.txt
-	@echo -e "$(GREEN)✓ Updated$(NC)"

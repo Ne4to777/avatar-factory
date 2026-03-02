@@ -25,15 +25,17 @@
 
 | Действие | MacBook (Ноутбук) | Windows PC (GPU) |
 |----------|-------------------|------------------|
-| **Первый запуск** | `make install` | `cd gpu-worker && python setup.py` |
+| **Первый запуск** | `make install` | `make install` (Git Bash)<br>или `.\install_windows.ps1` |
 | **Запуск инфраструктуры** | `make setup-docker` | Не требуется |
 | **Применить миграции** | `make setup-db` | Не требуется |
-| **Запуск приложения** | `make dev` (Terminal 1)<br>`make worker` (Terminal 2) | `python server.py` или<br>`uvicorn server:app --host 0.0.0.0 --port 8001` |
-| **Проверка здоровья** | `make health` или<br>`curl localhost:3000/api/health` | `curl http://localhost:8001/health` |
+| **Запуск приложения** | `make dev` (Terminal 1)<br>`make worker` (Terminal 2) | `make run` (Git Bash)<br>или `python server.py` |
+| **Проверка здоровья** | `make health` или<br>`curl localhost:3000/api/health` | `make health` или<br>`curl http://localhost:8001/health` |
 | **Остановка** | `make stop` | `Ctrl+C` |
-| **Тесты** | `make test-unit` (172 теста)<br>`make test-integration` (5 тестов) | `pytest test_temp_file_cleanup.py` |
-| **Логи** | `make logs` | `tail -f logs/server.log` |
-| **Очистка** | `make clean` | Не требуется |
+| **Тесты** | `make test-unit` (172 теста)<br>`make test-integration` (5 тестов) | `make test` |
+| **Статус установки** | `make status` | `make status` |
+| **Логи** | `make logs` | `make logs` (если `run-background`) |
+| **Очистка** | `make clean` | `make clean` |
+| **Переустановка** | `make reinstall` | `make reinstall` |
 
 ---
 
@@ -110,7 +112,35 @@ make stop
 
 #### Первый раз (setup):
 
-**Автоматическая установка (рекомендуется):**
+**Вариант 1: Make (рекомендуется):**
+
+```bash
+# Требуется: Git Bash, WSL, или GNU Make
+
+# 1. Clone проекта
+cd /c/Projects
+git clone https://github.com/Ne4to777/avatar-factory.git
+cd avatar-factory/gpu-worker
+
+# 2. Pull последние изменения
+git pull origin main
+
+# 3. Установка через Make
+make install
+
+# Make автоматически:
+# - Создаст venv
+# - Обновит pip, setuptools, wheel
+# - Установит PyTorch 2.1.0 + CUDA 11.8
+# - Установит mmcv через mim (правильная версия)
+# - Установит все остальные зависимости
+# - Проверит установку
+
+# 4. Первый запуск (скачает модели ~5GB)
+make run
+```
+
+**Вариант 2: PowerShell скрипт:**
 
 ```powershell
 # 1. Clone проекта
@@ -122,18 +152,10 @@ cd avatar-factory\gpu-worker
 git pull origin main
 
 # 3. Запустить автоматическую установку
-# Для PowerShell:
 .\install_windows.ps1
 
 # Или для CMD:
 install_windows.bat
-
-# Скрипт автоматически:
-# - Создаст venv
-# - Установит PyTorch 2.1.0 + CUDA 11.8
-# - Установит mmcv через mim (правильная версия)
-# - Установит все остальные зависимости
-# - Проверит установку
 
 # 4. Первый запуск (скачает модели ~5GB)
 python server.py
@@ -165,6 +187,21 @@ python server.py
 ```
 
 #### Каждый день (запуск):
+
+**С Make (Git Bash):**
+
+```bash
+cd /c/Projects/avatar-factory/gpu-worker
+
+# Запустить сервер
+make run
+
+# Или в фоне (с логами)
+make run-background
+make logs  # Смотреть логи
+```
+
+**С PowerShell/CMD:**
 
 ```powershell
 cd C:\Projects\avatar-factory\gpu-worker
@@ -274,8 +311,9 @@ HOST=0.0.0.0
 | PostgreSQL не стартует | `make logs-postgres` | Не применимо |
 | GPU Worker недоступен | Проверь `GPU_SERVER_URL` в `.env` | Проверь firewall |
 | Нет CUDA | Не применимо | Установи CUDA Toolkit 11.8+ |
-| mmcv build error | Не применимо | Используй `install_windows.ps1` или<br>`mim install mmcv==2.1.0` |
-| ModuleNotFoundError: pkg_resources | Не применимо | `pip install --upgrade setuptools` |
+| mmcv build error | Не применимо | `make reinstall` или<br>`mim install mmcv==2.1.0` |
+| ModuleNotFoundError: pkg_resources | Не применимо | `make clean-venv && make install` |
+| openxlab конфликт | Не применимо | `make reinstall` (чистый venv) |
 
 ---
 
