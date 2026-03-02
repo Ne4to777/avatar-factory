@@ -20,6 +20,7 @@ export default function HomePage() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cleanupPoll, setCleanupPoll] = useState<(() => void) | null>(null);
   
   // Обработка выбора фото
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,37 +85,76 @@ export default function HomePage() {
       setVideoId(createData.videoId);
       
       // 3. Отслеживаем прогресс
-      pollVideoStatus(createData.videoId);
-      
+      const cleanup = await pollVideoStatus(createData.videoId);
+      setCleanupPoll(() => cleanup);
+
     } catch (err: any) {
       setError(err.message);
       setStatus('idle');
     }
   };
   
-  // Опрос статуса видео
-  const pollVideoStatus = async (id: string) => {
-    const interval = setInterval(async () => {
+  // Опрос статуса видео — возвращает функцию очистки интервала
+  const pollVideoStatus = async (id: string): Promise<() => void> => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const poll = async (): Promise<string> => {
       try {
         const res = await fetch(`/api/videos/${id}`);
         const data = await res.json();
-        
+
         setProgress(data.video.progress);
-        
+
         if (data.video.status === 'COMPLETED') {
-          clearInterval(interval);
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
           setVideoUrl(data.video.videoUrl);
           setStatus('idle');
+          return data.video.status;
         } else if (data.video.status === 'FAILED') {
-          clearInterval(interval);
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
           setError(data.video.errorMessage || 'Ошибка генерации');
           setStatus('idle');
+          return data.video.status;
         }
+        return data.video.status;
       } catch (err) {
         console.error('Polling error:', err);
+        setError('Не удалось проверить статус видео');
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        return 'FAILED';
       }
-    }, 2000); // каждые 2 секунды
+    };
+
+    const initialStatus = await poll();
+    if (initialStatus !== 'COMPLETED' && initialStatus !== 'FAILED') {
+      intervalId = setInterval(() => poll(), 2000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
   };
+
+  // Очистка интервала при размонтировании (навигация со страницы)
+  useEffect(() => {
+    return () => {
+      if (cleanupPoll) {
+        cleanupPoll();
+      }
+    };
+  }, [cleanupPoll]);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
