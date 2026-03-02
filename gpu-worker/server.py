@@ -33,7 +33,7 @@ logger.info("="*60)
 # Import dependencies with logging
 try:
     logger.info("Importing FastAPI...")
-    from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Query
+    from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Query, BackgroundTasks
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import FileResponse, StreamingResponse
     logger.info("FastAPI imported successfully")
@@ -448,6 +448,7 @@ async def diagnostics(x_api_key: str = Header()):
 
 @app.post("/api/tts")
 async def text_to_speech(
+    background_tasks: BackgroundTasks,
     text: str = Query(..., description="Text to synthesize"),
     speaker: str = Query("xenia", description="Speaker voice"),
     x_api_key: str = Header()
@@ -458,6 +459,7 @@ async def text_to_speech(
     if not tts_model:
         raise HTTPException(status_code=503, detail="TTS model not loaded")
     
+    output_path = None
     try:
         logger.info(f"TTS request: text='{text[:50]}...', speaker={speaker}")
         
@@ -477,9 +479,24 @@ async def text_to_speech(
         sf.write(str(output_path), audio_np, sample_rate)
         
         logger.info(f"✅ TTS generated: {output_path.name} ({len(audio_np)} samples)")
+        
+        def cleanup_wav():
+            try:
+                if output_path and output_path.exists():
+                    output_path.unlink()
+                    logger.debug(f"Cleaned up TTS temp: {output_path.name}")
+            except OSError as e:
+                logger.warning(f"Failed to cleanup TTS temp {output_path}: {e}")
+
+        background_tasks.add_task(cleanup_wav)
         return FileResponse(output_path, media_type="audio/wav")
         
     except Exception as e:
+        if output_path and output_path.exists():
+            try:
+                output_path.unlink()
+            except OSError:
+                pass
         logger.error(f"❌ TTS failed: {type(e).__name__}: {e}")
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
@@ -500,6 +517,9 @@ async def create_lipsync(
         logger.error("MuseTalk not loaded")
         raise HTTPException(status_code=503, detail="MuseTalk not available - run install-musetalk.ps1")
     
+    image_path = None
+    audio_path = None
+    output_path = None
     try:
         logger.info(f"Lip-sync request: {image.filename}, {audio.filename}")
         logger.info(f"  Parameters: bbox_shift={bbox_shift}, batch_size={batch_size}, fps={fps}")
@@ -533,21 +553,30 @@ async def create_lipsync(
         logger.info(f"    Size: {video_size_mb:.2f} MB")
         
         # Очистка входных файлов
-        image_path.unlink()
-        audio_path.unlink()
+        if image_path.exists():
+            image_path.unlink()
+        if audio_path.exists():
+            audio_path.unlink()
         logger.info("Cleaned up input files")
         
         logger.info(f"Sending video file ({video_size_mb:.2f} MB) to client...")
         
         # Use streaming response for reliable large file transfer
+        # try/finally в генераторе гарантирует удаление видео даже при обрыве клиента
+        video_path = output_path
         def iterfile():
-            with open(output_path, "rb") as f:
-                chunk_size = 64 * 1024  # 64KB chunks
-                while chunk := f.read(chunk_size):
-                    yield chunk
-            # Clean up temp file after sending
-            output_path.unlink()
-            logger.info(f"Video sent and cleaned up: {output_path.name}")
+            try:
+                with open(video_path, "rb") as f:
+                    chunk_size = 64 * 1024  # 64KB chunks
+                    while chunk := f.read(chunk_size):
+                        yield chunk
+            finally:
+                try:
+                    if video_path.exists():
+                        video_path.unlink()
+                        logger.debug(f"Video sent and cleaned up: {video_path.name}")
+                except OSError as e:
+                    logger.warning(f"Failed to cleanup lipsync video {video_path}: {e}")
         
         return StreamingResponse(
             iterfile(),
@@ -560,12 +589,21 @@ async def create_lipsync(
         
     except Exception as e:
         import traceback
+        # Очистка при любой ошибке (до или после generate)
+        for p in (image_path, audio_path, output_path):
+            if p and p.exists():
+                try:
+                    p.unlink()
+                    logger.debug(f"Cleaned up on error: {p.name}")
+                except OSError:
+                    pass
         logger.error(f"❌ Lip-sync failed: {e}")
         logger.error(f"Full traceback:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-background")
 async def generate_background(
+    background_tasks: BackgroundTasks,
     prompt: str = Query(..., description="Background prompt"),
     negative_prompt: str = Query("blurry, low quality, distorted", description="Negative prompt"),
     width: int = Query(1080, description="Image width"),
@@ -578,6 +616,7 @@ async def generate_background(
     if not sd_pipeline:
         raise HTTPException(status_code=503, detail="Stable Diffusion model not loaded")
     
+    output_path = None
     try:
         logger.info(f"Background generation: prompt='{prompt[:50]}...', size={width}x{height}")
         
@@ -596,9 +635,24 @@ async def generate_background(
         image.save(output_path)
         
         logger.info(f"✅ Background generated: {output_path.name}")
+
+        def cleanup_png():
+            try:
+                if output_path and output_path.exists():
+                    output_path.unlink()
+                    logger.debug(f"Cleaned up background temp: {output_path.name}")
+            except OSError as e:
+                logger.warning(f"Failed to cleanup background temp {output_path}: {e}")
+
+        background_tasks.add_task(cleanup_png)
         return FileResponse(output_path, media_type="image/png")
         
     except Exception as e:
+        if output_path and output_path.exists():
+            try:
+                output_path.unlink()
+            except OSError:
+                pass
         logger.error(f"❌ Background generation failed: {type(e).__name__}: {e}")
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
@@ -643,6 +697,7 @@ async def speech_to_text(
             detail="Whisper STT not loaded. Install: pip install openai-whisper"
         )
     
+    audio_path = None
     try:
         logger.info(f"STT request: file={audio.filename}, language={language}")
         
@@ -662,8 +717,6 @@ async def speech_to_text(
             verbose=False
         )
         
-        # Очистка
-        audio_path.unlink()
         logger.info(f"✅ STT completed: {len(result['text'])} characters")
         
         return {
@@ -683,6 +736,13 @@ async def speech_to_text(
         logger.error(f"❌ STT failed: {type(e).__name__}: {e}")
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=f"STT error: {str(e)}")
+    finally:
+        if audio_path and audio_path.exists():
+            try:
+                audio_path.unlink()
+                logger.debug(f"Cleaned up STT temp: {audio_path.name}")
+            except OSError as e:
+                logger.warning(f"Failed to cleanup STT temp {audio_path}: {e}")
 
 @app.post("/api/improve-text")
 async def improve_text(
@@ -954,20 +1014,26 @@ async def generate_video_api(
         }
         
         # Если есть keyframe → image-to-video
+        keyframe_path = None
         if keyframe:
             logger.info(f"Image-to-video mode with keyframe: {keyframe.filename}")
             
-            # Сохранить keyframe
-            keyframe_path = TEMP_DIR / f"key_{os.urandom(8).hex()}.png"
-            with open(keyframe_path, "wb") as f:
-                f.write(await keyframe.read())
-            
-            # TODO: Загрузить на Polza storage или передать base64
-            # Для MVP: текст-описание
-            request_data["reference_image"] = "provided"
-            
-            # Очистка
-            keyframe_path.unlink()
+            try:
+                # Сохранить keyframe
+                keyframe_path = TEMP_DIR / f"key_{os.urandom(8).hex()}.png"
+                with open(keyframe_path, "wb") as f:
+                    f.write(await keyframe.read())
+                
+                # TODO: Загрузить на Polza storage или передать base64
+                # Для MVP: текст-описание
+                request_data["reference_image"] = "provided"
+            finally:
+                if keyframe_path and keyframe_path.exists():
+                    try:
+                        keyframe_path.unlink()
+                        logger.debug(f"Cleaned up keyframe temp: {keyframe_path.name}")
+                    except OSError as e:
+                        logger.warning(f"Failed to cleanup keyframe {keyframe_path}: {e}")
         
         # Запрос к Polza.ai API
         async with httpx.AsyncClient(timeout=300.0) as client:
@@ -1031,6 +1097,8 @@ async def hybrid_pipeline(
     """
     verify_api_key(x_api_key)
     
+    audio_path = None
+    image_paths = []
     try:
         logger.info("="*60)
         logger.info("HYBRID PIPELINE START")
@@ -1054,10 +1122,14 @@ async def hybrid_pipeline(
             with open(audio_path, "wb") as f:
                 f.write(await audio.read())
             
-            # Распознать
-            stt_result = whisper_model.transcribe(str(audio_path), fp16=True, verbose=False)
-            text = stt_result["text"]
-            audio_path.unlink()
+            try:
+                # Распознать
+                stt_result = whisper_model.transcribe(str(audio_path), fp16=True, verbose=False)
+                text = stt_result["text"]
+            finally:
+                if audio_path.exists():
+                    audio_path.unlink()
+                    logger.debug(f"Cleaned up pipeline audio: {audio_path.name}")
             
             results["steps_completed"].append("stt_local")
             results["outputs"]["original_text"] = text
@@ -1102,7 +1174,6 @@ async def hybrid_pipeline(
         if not sd_pipeline:
             raise HTTPException(status_code=503, detail="SDXL not loaded")
         
-        image_paths = []
         for i in range(num_images):
             logger.info(f"Generating image {i+1}/{num_images}...")
             
@@ -1116,10 +1187,10 @@ async def hybrid_pipeline(
             
             img_path = TEMP_DIR / f"pipeline_img_{i}_{os.urandom(4).hex()}.png"
             image.save(img_path)
-            image_paths.append(str(img_path))
+            image_paths.append(img_path)
         
         results["steps_completed"].append("image_generation_local")
-        results["outputs"]["images"] = [p.split("/")[-1] for p in image_paths]
+        results["outputs"]["images"] = [p.name for p in image_paths]
         logger.info(f"✅ Generated {num_images} images")
         
         # STEP 4: Video generation (API или skip)
@@ -1166,6 +1237,21 @@ async def hybrid_pipeline(
         logger.error(f"Pipeline failed: {e}")
         logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
+    finally:
+        # Очистка всех временных файлов (WAV и PNG)
+        if audio_path and audio_path.exists():
+            try:
+                audio_path.unlink()
+                logger.debug(f"Cleaned up pipeline audio: {audio_path.name}")
+            except OSError:
+                pass
+        for img_path in image_paths:
+            if img_path and img_path.exists():
+                try:
+                    img_path.unlink()
+                    logger.debug(f"Cleaned up pipeline image: {img_path.name}")
+                except OSError:
+                    pass
 
 if __name__ == "__main__":
     import signal
