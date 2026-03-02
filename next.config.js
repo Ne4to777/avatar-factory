@@ -3,19 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // Разрешаем загрузку изображений из MinIO
+  // Разрешаем загрузку изображений из MinIO/S3 (S3_* takes precedence over MINIO_*)
   images: {
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '9000',
-        pathname: '/**',
-      },
-      {
-        protocol: 'http',
-        hostname: process.env.MINIO_ENDPOINT || 'localhost',
-        port: process.env.MINIO_PORT || '9000',
+        protocol: process.env.S3_USE_SSL === 'true' || process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http',
+        hostname: process.env.S3_ENDPOINT || process.env.MINIO_ENDPOINT || 'localhost',
+        port: process.env.S3_PORT || process.env.MINIO_PORT || '9000',
         pathname: '/**',
       },
     ],
